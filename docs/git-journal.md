@@ -39,3 +39,26 @@ What Git is doing to the files on disk when you switch.
 ## git naming conventions
 Your branch name and commit message, and why each follows the convention.
 One example of a name that would fail review, and what is wrong with it.
+
+## short lived branches
+What merge debt is, in your own words.
+How you would break a desk booking feature into three short-lived branches.
+
+## create PR 
+A link to your open Pull Request, and your description under Summary, What Was Done and How to Test.
+What the green and red lines in the Files changed tab represent.
+
+## review PR
+The problems you found in your own db.js during self-review, most serious first.
+Two problems your mentor raised, and whether you had already spotted them.
+One thing you will check for automatically on your next Pull Request as a result.
+
+## merge stratergies
+git log --oneline on main after squashing, showing one clean commit.
+Why the branch would not delete until you had pulled.
+When you would use a merge commit rather than a squash.
+
+## merge conflicts
+The raw conflict markers as they appeared in server.js, before you resolved them.
+Which version you kept and why.
+Why Git needs both add and commit to finish a conflicted merge.
