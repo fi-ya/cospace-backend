@@ -1,10 +1,9 @@
 import express, { Request, Response } from "express";
-import bookingsRouter from "./routes/bookings";
+import bookingRouter from "./routes/booking.routes";
 
 const app = express();
 const port = 5000;
 
-// Middleware for parsing JSON bodies
 app.use(express.json());
 
 // Define the root route for the API
@@ -15,7 +14,7 @@ app.get("/", (req: Request, res: Response) => {
 	});
 });
 
-app.use("/bookings", bookingsRouter);
+app.use("/bookings", bookingRouter);
 
 const server = app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
