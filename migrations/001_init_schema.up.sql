@@ -32,8 +32,6 @@ CREATE TABLE IF NOT EXISTS users (
   first_name VARCHAR(100) NOT NULL,
   last_name  VARCHAR(100) NOT NULL,
   email      VARCHAR(191) NOT NULL UNIQUE, -- 191 is safety limit for indexes in MySQL utf8mb4
-  role       VARCHAR(50)  NOT NULL DEFAULT 'colleague',
-  password   VARCHAR(255) NOT NULL,        -- Sized for secure bcrypt hash strings
   team_id    INT,
   FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
