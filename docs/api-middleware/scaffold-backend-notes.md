@@ -210,3 +210,68 @@ HTTP request
 ```
 
 This separation keeps routing declarative and easy to scan. Business behavior belongs in the controller, service, or repository layer, while the route file remains a clear traffic map.
+
+# Mastery (Manual Feedback & Correction Loop) notes
+
+## Possible Issue: AI frequently passes req or res directly to service functions (e.g., bookingService.create(req)), meaning your service is locked to Express and cannot be used in a CLI script, desktop app, or message queue runner.
+
+booking.service.ts already meets the requirement:
+
+- Zero Express imports
+- No Request or Response types
+- Accepts only strings, Booking, and Partial<Booking>
+- Returns Booking[], Booking, or undefined
+- Business validation remains inside the service
+
+The controller extracts HTTP data before calling the service, so the service can be reused by a CLI, desktop app, or message queue worker.
+
+Confirmed with: npx tsc --noEmit
+and a source search found no Express or HTTP references in services.
+
+## Potentinal issue: AI often returns internal database errors directly to controllers, or forces the repository to know about HTTP statuses like 404.
+
+The repository already follows the required separation:
+
+- BookingRepository contains no HTTP status codes or Express imports.
+- Missing resources return undefined.
+- BookingService passes that result through.
+- BookingController decides when to return:
+
+```res.status(404).json({ error: "Booking not found" });```
+
+TypeScript validation passed, and the repository HTTP-independence check found no status or Express references.
+
+## Potential issue: In JavaScript/TypeScript, when passing a class method as a callback (e.g., router.get('/', bookingController.getAll)), the method loses its original class instance reference (this), leading to runtime crashes.
+
+Updated booking.routes.ts to use wrapper arrow functions:
+
+```ts
+router.get("/", (req, res) => bookingController.getAll(req, res));
+router.get("/:id", (req, res) => bookingController.getById(req, res));
+router.post("/", (req, res) => bookingController.create(req, res));
+router.put("/:id", (req, res) => bookingController.update(req, res));
+router.patch("/:id", (req, res) => bookingController.patch(req, res));
+router.delete("/:id", (req, res) => bookingController.delete(req, res));
+```
+
+This preserves the bookingController instance context.
+
+## AI often instantiates duplicate database repositories across multiple services, causing memory leaks and split state caches.
+
+The instantiation chain is already correct:
+
+```text
+booking.routes.ts
+  -> new BookingController()
+      -> new BookingService()
+          -> new BookingRepository()
+```
+
+Specifically:
+
+- `booking.routes.ts` creates the controller once.
+- `booking.controller.ts` owns the service instance.
+- `booking.service.ts` owns the repository instance.
+- No duplicate repositories are created elsewhere.
+
+TypeScript validation passed, and the search found only these three expected constructor calls.
