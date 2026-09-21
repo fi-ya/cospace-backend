@@ -171,3 +171,42 @@ The controller maps service outcomes to HTTP statuses:
 
 The service does not know about Express, HTTP, or JSON. It returns domain values or throws business errors; the controller turns those outcomes into clean API responses.
 
+## Understand how routing acts as a thin routing-table layout that directs traffic without executing any business rules.
+
+Routing should only connect an HTTP method and path to the correct controller method.
+
+In `booking.routes.ts`:
+
+```ts
+router.get("/", bookingController.getAll);
+router.get("/:id", bookingController.getById);
+router.post("/", bookingController.create);
+router.put("/:id", bookingController.update);
+router.patch("/:id", bookingController.patch);
+router.delete("/:id", bookingController.delete);
+```
+
+The route layer answers:
+
+> Which controller handles this request?
+
+It should not:
+
+- Search the bookings array
+- Validate desk names
+- Modify booking state
+- Build business-specific responses
+- Decide how a booking is created or deleted
+
+The request flow is:
+
+```text
+HTTP request
+  -> router matches method and path
+  -> controller receives req and res
+  -> service applies business rules
+  -> repository reads or changes data
+  -> controller sends HTTP response
+```
+
+This separation keeps routing declarative and easy to scan. Business behavior belongs in the controller, service, or repository layer, while the route file remains a clear traffic map.

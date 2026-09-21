@@ -1,11 +1,7 @@
 import express, { Request, Response } from "express";
-import bookingsRouter from "./routes/bookings";
 
 const app = express();
 const port = 5000;
-
-// Middleware for parsing JSON bodies
-app.use(express.json());
 
 // Define the root route for the API
 app.get("/", (req: Request, res: Response) => {
@@ -14,8 +10,6 @@ app.get("/", (req: Request, res: Response) => {
 		message: "CoSpace API is running",
 	});
 });
-
-app.use("/bookings", bookingsRouter);
 
 const server = app.listen(port, () => {
   console.log(`Server listening on port ${port}`);

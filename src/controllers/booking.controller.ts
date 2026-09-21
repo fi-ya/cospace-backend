@@ -52,6 +52,20 @@ export class BookingController {
 		}
 	};
 
+	patch = (req: Request<{ id: string }>, res: Response): void => {
+		const booking = this.bookingService.findById(req.params.id);
+
+		if (!booking) {
+			res.status(404).json({ error: "Booking not found" });
+			return;
+		}
+
+		const updatedBooking = this.bookingService.update(req.params.id, {
+			active: !booking.active,
+		});
+		res.status(200).json(updatedBooking);
+	};
+
 	delete = (req: Request<{ id: string }>, res: Response): void => {
 		const booking = this.bookingService.delete(req.params.id);
 
