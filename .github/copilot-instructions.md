@@ -55,9 +55,7 @@ Represents an employee. A User belongs to one Team via `team_id`.
 | `first_name` | string | colleague's first name |
 | `last_name` | string | colleague's last name |
 | `email` | string | unique, mandatory |
-| `password` | string | stored as a bcrypt hash, never plain text |
-| `role` | string | defaults to `colleague`; the other value is `admin` |
-| `team_id` | number | foreign key pointing to `teams.id`, nullable |
+| `team_id` | number | foreign key pointing to `teams.id`, nullable (`ON DELETE SET NULL` cascades) |
 
 ---
 
@@ -90,10 +88,11 @@ The junction table linking a User and a Desk on a given date. A Booking belongs 
 | Field | Type | Rules |
 |---|---|---|
 | `id` | number | unique, primary key, auto-increment |
-| `user_id` | number | foreign key pointing to `users.id`, mandatory |
-| `desk_id` | number | foreign key pointing to `desks.id`, mandatory |
+| `user_id` | number | foreign key pointing to `users.id`, mandatory (`ON DELETE CASCADE` cascades) |
+| `desk_id` | number | foreign key pointing to `desks.id`, mandatory (`ON DELETE CASCADE` cascades) |
 | `booking_date` | string | a valid ISO 8601 calendar date (YYYY-MM-DD) |
 | `active` | boolean | defaults to true |
+| `uniq_desk_date` | composite constraint | `UNIQUE(desk_id, booking_date)` index to guarantee no double-bookings |
 
 ---
 
