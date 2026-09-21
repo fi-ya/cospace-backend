@@ -102,3 +102,72 @@ The service does not know that Express exists. It can therefore be called from:
 - A future background job
 
 This keeps the rule consistent. Any caller that tries to create a booking with a desk name shorter than three characters receives the same validation failure before the repository changes the stored array.
+
+## Master the extraction of HTTP payloads and dynamic parameters, mapping service results back to clean JSON responses.
+
+The controller translates HTTP input into service calls, then translates service results into HTTP responses.
+
+### Dynamic route parameters
+
+For:
+
+```ts
+GET /bookings/2
+```
+
+Express provides the path value through `req.params`:
+
+```ts
+getById = (req: Request<{ id: string }>, res: Response): void => {
+  const booking = this.bookingService.findById(req.params.id);
+
+  if (!booking) {
+    res.status(404).json({ error: "Booking not found" });
+    return;
+  }
+
+  res.status(200).json(booking);
+};
+```
+
+`Request<{ id: string }>` documents that the route contains an `id` parameter, and `req.params.id` is passed to the service.
+
+### Request payloads
+
+For a JSON request body:
+
+```ts
+POST /bookings
+```
+
+the payload is extracted from `req.body`:
+
+```ts
+create = (
+  req: Request<Record<string, never>, Booking, Booking>,
+  res: Response,
+): void => {
+  try {
+    const booking = this.bookingService.create(req.body);
+    res.status(201).json(booking);
+  } catch (error: unknown) {
+    res.status(400).json({
+      error: this.getErrorMessage(error),
+    });
+  }
+};
+```
+
+The request type specifies that the body must match `Booking`.
+
+### Mapping results to responses
+
+The controller maps service outcomes to HTTP statuses:
+
+- Successful result: `200` or `201`
+- Missing result (`undefined`): `404`
+- Service validation error: `400`
+- Successful deletion: `204 No Content`
+
+The service does not know about Express, HTTP, or JSON. It returns domain values or throws business errors; the controller turns those outcomes into clean API responses.
+
