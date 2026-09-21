@@ -44,3 +44,79 @@ Because this data is stored in memory, it is temporary:
 - It can be imported by routes or services.
 - Changes are lost when the server restarts.
 - It is useful for early development before connecting the API to MySQL.
+
+## Understand how to read incoming client variables from route parameters and request payloads.
+
+Express provides incoming client variables through the `request` object.
+
+**Route parameters**
+
+For a route such as:
+
+```ts
+app.get(
+  "/bookings/:id",
+  (req: Request<{ id: string }>, res: Response) => {
+    const bookingId = Number(req.params.id);
+  },
+);
+```
+
+A client request like:
+
+```bash
+curl http://localhost:5000/bookings/2
+```
+
+places `"2"` in:
+
+```ts
+req.params.id
+```
+
+Route parameters are strings, so the code converts the value to a number with `Number()` before comparing it with a booking ID.
+
+**Request payloads**
+
+For a JSON request body:
+
+```ts
+app.post(
+  "/bookings",
+  (req: Request<Record<string, never>, Booking, Booking>, res: Response) => {
+    const newBooking = req.body;
+    bookings.push(newBooking);
+    res.status(201).json(newBooking);
+  },
+);
+```
+
+A client can send:
+
+```bash
+curl -X POST http://localhost:5000/bookings \
+  -H "Content-Type: application/json" \
+  -d '{"id":4,"desk":"Desk-04","floor":2,"date":"2026-09-24","active":true}'
+```
+
+The JSON payload is available through:
+
+```ts
+req.body
+```
+
+This works because the application registers the JSON parser:
+
+```ts
+app.use(express.json());
+```
+
+In summary:
+
+```text
+/bookings/:id       -> req.params.id
+JSON request body   -> req.body
+```
+
+The TypeScript annotations document the expected structure, but runtime validation would still be needed before trusting arbitrary client input.
+

@@ -17,6 +17,8 @@ export const bookings: Booking[] = [
 const app = express();
 const port = 5000;
 
+app.use(express.json());
+
 // Define the root route for the API
 app.get("/", (req: Request, res: Response) => {
 	res.status(200).json({
@@ -24,6 +26,33 @@ app.get("/", (req: Request, res: Response) => {
 		message: "CoSpace API is running",
 	});
 });
+
+app.get("/bookings", (_req: Request, res: Response) => {
+  res.status(200).json(bookings);
+});
+
+app.get(
+  "/bookings/:id",
+  (req: Request<{ id: string }>, res: Response) => {
+    const bookingId = Number(req.params.id);
+    const booking = bookings.find(({ id }) => id === bookingId);
+
+    if (!booking) {
+      res.status(404).json({ message: "Booking not found" });
+      return;
+    }
+
+    res.status(200).json(booking);
+  },
+);
+
+app.post(
+  "/bookings",
+  (req: Request<Record<string, never>, Booking, Booking>, res: Response) => {
+    bookings.push(req.body);
+    res.status(201).json(req.body);
+  },
+);
 
 const server = app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
