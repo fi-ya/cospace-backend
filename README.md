@@ -25,23 +25,32 @@ Migration 002 adds the `uniq_desk_date` constraint on `(desk_id, booking_date)`,
 
 ## Setup
 
+Open terminal and cd into the workspace directory.
+
+Start a mysql client 
+```zsh
+mysql -u root
+```
+
+To view existing databases run: `SHOW DATABASES;`
 Create the database first because the migration files create tables but do not create the database itself:
 
 ```sql
 CREATE DATABASE cospace;
 ```
+To view current database run: `SELECT DATABASE();`
 
 Apply the migrations in order from the repository root:
 
 ```bash
-mysql -u root -p cospace < migrations/001_init_schema.up.sql
-mysql -u root -p cospace < migrations/002_add_indexing.up.sql
+SOURCE migrations/001_init_schema.up.sql
+SOURCE migrations/002_add_indexing.up.sql
 ```
 
 Load the sample data and reporting queries:
 
 ```bash
-mysql -u root -p < scripts/seed_and_queries.sql
+SOURCE scripts/seed_and_queries.sql
 ```
 
 The seed script starts by clearing the existing `bookings`, `users`, `desks`, `rooms`, and `teams` rows. It also includes example update and delete statements, so use it only against a development database.
@@ -51,8 +60,8 @@ The seed script starts by clearing the existing `bookings`, `users`, `desks`, `r
 Undo migration 002 before migration 001:
 
 ```bash
-mysql -u root -p cospace < migrations/002_add_indexing.down.sql
-mysql -u root -p cospace < migrations/001_init_schema.down.sql
+SOURCE migrations/002_add_indexing.down.sql
+SOURCE migrations/001_init_schema.down.sql
 ```
 
 ## Repository Layout
