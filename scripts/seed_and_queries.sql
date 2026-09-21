@@ -104,3 +104,49 @@ WHERE id = 3;
 
 -- Quick query to verify the cascade aftermath
 SELECT * FROM bookings;
+
+---
+-- =============================================================================
+-- 🔍 PART 2: The Five Mastery Queries & Verification (CoSpace Implementation)
+-- =============================================================================
+
+-- Query 1: INNER JOIN (Selects matching names from both tables)
+-- Returns: 7 rows (Frank Miller is omitted because his team_id is NULL)
+SELECT 
+    CONCAT_WS(' ', u.first_name, u.last_name) AS colleague_name, 
+    t.name AS team_name
+FROM users u
+INNER JOIN teams t ON u.team_id = t.id;
+
+
+-- Query 2: LEFT JOIN (Keeps all users, even those with unmatched teams)
+-- Returns: 8 rows (Frank Miller is included in the output, showing NULL under team_name)
+SELECT 
+    CONCAT_WS(' ', u.first_name, u.last_name) AS colleague_name, 
+    t.name AS team_name
+FROM users u
+LEFT JOIN teams t ON u.team_id = t.id;
+
+
+-- Query 3: Finding the Empty Team (Where no users/colleagues are assigned)
+-- Returns: 0 rows initially with our seed, but if a team is empty, it will be listed.
+-- Uses LEFT JOIN from teams to users and filters for NULLs.
+SELECT 
+    t.name AS empty_team
+FROM teams t
+LEFT JOIN users u ON t.id = u.team_id
+WHERE u.id IS NULL;
+
+
+-- Query 4: Grouped Count (Counting colleagues presence per team)
+-- Returns: 3 rows (Creative Studio: 3, Platform Engineering: 3, Corporate Operations: 2)
+-- Crucial Note: We count 'u.id' rather than '*' so that empty teams resolve to 0 instead of 1.
+SELECT 
+    t.name AS team_name, 
+    COUNT(u.id) AS total_colleagues
+FROM teams t
+LEFT JOIN users u ON t.id = u.team_id
+GROUP BY t.id, t.name;
+
+
+
