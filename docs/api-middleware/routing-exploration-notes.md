@@ -120,3 +120,81 @@ JSON request body   -> req.body
 
 The TypeScript annotations document the expected structure, but runtime validation would still be needed before trusting arbitrary client input.
 
+## Master the implementation logic behind modifying and removing in-memory state based on client identifiers.
+
+The mutation routes use the client-supplied `id` to locate a booking in the in-memory array.
+
+### 1. Extract the identifier
+
+For a request such as:
+
+```text
+PUT /bookings/2
+```
+
+Express exposes the value through:
+
+```ts
+req.params.id
+```
+
+Route parameters are strings, so convert the ID before comparing it with the numeric `Booking.id`:
+
+```ts
+const bookingId = Number(req.params.id);
+```
+
+### 2. Find the array position
+
+```ts
+const bookingIndex = bookings.findIndex(
+  ({ id }) => id === Number(req.params.id),
+);
+```
+
+`findIndex()` returns:
+
+- The array index when a matching booking exists.
+- `-1` when no booking matches.
+
+### 3. Replace an object with `PUT`
+
+```ts
+if (bookingIndex === -1) {
+  res.status(404).json({ message: "Booking not found" });
+  return;
+}
+
+bookings[bookingIndex] = req.body;
+```
+
+`PUT` replaces the complete object at the matching array position.
+
+### 4. Modify one property with `PATCH`
+
+```ts
+const booking = bookings.find(({ id }) => id === Number(req.params.id));
+
+if (!booking) {
+  res.status(404).json({ message: "Booking not found" });
+  return;
+}
+
+booking.active = !booking.active;
+```
+
+`PATCH` keeps the same booking object and changes only its `active` property.
+
+### 5. Remove an object with `DELETE`
+
+```ts
+const [deletedBooking] = bookings.splice(bookingIndex, 1);
+```
+
+`splice()` mutates the original array:
+
+- `bookingIndex` identifies where removal starts.
+- `1` specifies that one item should be removed.
+- The removed item is returned in an array.
+
+This is why the code first checks for `-1`: calling `splice(-1, 1)` would accidentally remove the last booking.

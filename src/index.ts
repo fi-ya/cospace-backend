@@ -54,6 +54,55 @@ app.post(
   },
 );
 
+app.put(
+  "/bookings/:id",
+  (req: Request<{ id: string }, Booking, Booking>, res: Response) => {
+    const bookingIndex = bookings.findIndex(
+      ({ id }) => id === Number(req.params.id),
+    );
+
+    if (bookingIndex === -1) {
+      res.status(404).json({ message: "Booking not found" });
+      return;
+    }
+
+    bookings[bookingIndex] = req.body;
+    res.status(200).json(req.body);
+  },
+);
+
+app.patch(
+  "/bookings/:id",
+  (req: Request<{ id: string }>, res: Response) => {
+    const booking = bookings.find(({ id }) => id === Number(req.params.id));
+
+    if (!booking) {
+      res.status(404).json({ message: "Booking not found" });
+      return;
+    }
+
+    booking.active = !booking.active;
+    res.status(200).json(booking);
+  },
+);
+
+app.delete(
+  "/bookings/:id",
+  (req: Request<{ id: string }>, res: Response) => {
+    const bookingIndex = bookings.findIndex(
+      ({ id }) => id === Number(req.params.id),
+    );
+
+    if (bookingIndex === -1) {
+      res.status(404).json({ message: "Booking not found" });
+      return;
+    }
+
+    const [deletedBooking] = bookings.splice(bookingIndex, 1);
+    res.status(200).json(deletedBooking);
+  },
+);
+
 const server = app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
