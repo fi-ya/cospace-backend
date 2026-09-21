@@ -56,3 +56,49 @@ res.status(200).json(booking);
 ```
 
 This separation makes the code easier to test and prepares the application for replacing the in-memory array with MySQL later, without rewriting the route handlers.
+
+## Understand how to enforce domain business validation rules independently of our routing framework.
+
+I’ll use the current `BookingService` as the example and explain how its validation stays independent from Express routes and the repository.
+
+Read 
+
+Business validation belongs in `BookingService`, not inside the Express route.
+
+```ts
+create(booking: Booking): Booking {
+  if (booking.desk.length < 3) {
+    throw new Error("Desk name must be at least 3 characters long");
+  }
+
+  return this.bookingRepository.create(booking);
+}
+```
+
+The layers have separate responsibilities:
+
+- **Route/controller:** reads HTTP data and sends HTTP responses.
+- **Service:** applies business rules.
+- **Repository:** stores and retrieves data.
+
+A route calls the service:
+
+```ts
+try {
+  const booking = bookingService.create(req.body);
+  res.status(201).json(booking);
+} catch (error) {
+  res.status(400).json({
+    error: error instanceof Error ? error.message : "Invalid booking",
+  });
+}
+```
+
+The service does not know that Express exists. It can therefore be called from:
+
+- An Express route
+- A unit test
+- A command-line script
+- A future background job
+
+This keeps the rule consistent. Any caller that tries to create a booking with a desk name shorter than three characters receives the same validation failure before the repository changes the stored array.
