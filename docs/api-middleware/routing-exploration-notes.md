@@ -198,3 +198,24 @@ const [deletedBooking] = bookings.splice(bookingIndex, 1);
 - The removed item is returned in an array.
 
 This is why the code first checks for `-1`: calling `splice(-1, 1)` would accidentally remove the last booking.
+
+## Mastery notes
+
+## Issue: AI dumps all routing code directly into src/index.ts, making the entry point massive and unreadable.
+
+*Fix:* Create a new folder structure: src/routes/. Inside it, create a file named bookings.ts. Move your Booking interface, your mock array, and your five routes into this file.
+
+## Issue: AI rarely uses the modular Router class, which is vital for building clean, scalable directories.
+
+*Fix:* in src/routes/bookings.ts, import Router from express. Initialise it with const router = Router(). Swap all your app.get or app.post calls to router.get and router.post. Export the router, and import it inside src/index.ts using app.use('/bookings', bookingRouter).
+
+## Issue: AI almost always returns 200 OK for everything, which violates REST standards See RFC 2616 standards.
+
+*Fix:*Update your DELETE route to use .status(204).send(). Ensure that if a booking is not found during a GET, PUT, or PATCH operation, you send a .status(404).json({ error: 'Booking not found' }) response
+
+`204 No Content` is the better response for a successful deletion because the resource is gone and there is no response body to return. Standardise the requested missing-booking responses to the exact { error: "Booking not found" } shape.
+
+## Issue: AI frequently leaves route parameters uncasted (e.g., matching a string ID with a number ID), leading to silent comparison failures.
+
+
+*Fix:*Ensure your booking IDs are strings. When matching params inside your find/index operations, cleanly type your route parameters (e.g., req.params.id is a string). Ensure no references to the any keyword remain.
