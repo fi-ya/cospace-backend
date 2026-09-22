@@ -1,7 +1,6 @@
 import express, { Request, Response } from "express";
 import bookingRouter from "./routes/booking.routes";
 import { logger } from "./middleware/logger";
-import { auth } from "./middleware/auth";
 import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
@@ -19,7 +18,7 @@ app.get("/", (req: Request, res: Response) => {
 	});
 });
 
-app.use("/bookings", auth, bookingRouter);
+app.use("/bookings", bookingRouter);
 
 app.use(errorHandler);
 

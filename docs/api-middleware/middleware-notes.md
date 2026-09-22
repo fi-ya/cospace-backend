@@ -246,3 +246,20 @@ All four middleware files already satisfy this, have zero any usage.
 Picked up automatically since tsconfig.json's include: ["src/**/*.ts"] covers express.d.ts. TypeScript validation passed — req.user is now a valid, typed property anywhere Request is used (e.g. in auth.ts if you assign req.user = { role: "admin" } after verifying a token
 
 ## Global vs Route-Level Registration: AI often suggests registering everything globally, meaning public health routes or GET routes end up requiring authorization.
+
+Summary of the change:
+
+**`index.ts`** — `logger` and `errorHandler` remain global (they apply to every request regardless of route); removed `auth` from the blanket `app.use("/bookings", auth, bookingRouter)` mount so `GET /bookings` and `GET /bookings/:id` stay public.
+
+**`booking.routes.ts`** — `auth` and `validate` are now applied per-route, only on mutating operations:
+
+```ts
+router.get("/", ...);                                    // public
+router.get("/:id", ...);                                 // public
+router.post("/", auth, validate(["desk", "floor"]), ...); // protected + validated
+router.put("/:id", auth, ...);                            // protected
+router.patch("/:id", auth, ...);                          // protected
+router.delete("/:id", auth, ...);                         // protected
+```
+
+I had to explicitly annotate each wrapper's `Request<...>` generic, since adding `auth`/`validate` before the handler broke TypeScript's automatic inference of route param/body types from the bare `router.post(...)` overload.
