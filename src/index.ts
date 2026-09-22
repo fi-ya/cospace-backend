@@ -1,10 +1,13 @@
 import express, { Request, Response } from "express";
 import bookingRouter from "./routes/booking.routes";
+import { logger } from "./middleware/logger";
 
 const app = express();
 const port = 5000;
 
+// Register middleware 
 app.use(express.json());
+app.use(logger);
 
 // Define the root route for the API
 app.get("/", (req: Request, res: Response) => {
