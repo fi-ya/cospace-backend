@@ -193,3 +193,5 @@ Instead of dumping `err.issues` raw (with Zod's internal `code`, nested `path` a
 Made changes.
 
 ## 4. Overwriting Clean Inputs: AI often uses schema.safeParse but forgets to reassign req.body to the resulting data, meaning the sanitised values (like trimmed strings) never make it to the controllers.
+
+validateSchema uses schema.parse(req.body) (not safeParse), and the parsed, sanitized result is reassigned directly:
