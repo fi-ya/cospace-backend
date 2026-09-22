@@ -172,4 +172,24 @@ Made changes.
 
 ## 3. Swallowing Structured Errors: AI-generated error handlers often log ZodError objects as raw strings, returning an unhelpful "Internal Server Error" message to the user
 
+The type guard already exists, but it returns raw Zod issue objects (verbose, with code, path as arrays, internal metadata). I'll clean that up into a simple field → message structure:
+
+Updated the `ZodError` branch in `errorHandler.ts`:
+
+```ts
+if (err instanceof ZodError) {
+	const fieldErrors = err.issues.map((issue) => ({
+		field: issue.path.join("."),
+		message: issue.message,
+	}));
+
+	res.status(400).json({ error: "Validation failed", fieldErrors });
+	return;
+}
+```
+
+Instead of dumping `err.issues` raw (with Zod's internal `code`, nested `path` arrays, etc.), each issue is now flattened into `{ field, message }` — e.g. for a missing `desk`, the response includes `{ "field": "desk", "message": "Required" }`. This satisfies the guard's purpose: exactly which fields failed and why, in a clean, predictable shape, while non-Zod errors still fall through to the generic `500` path with the stack logged server-side. TypeScript validation passed.
+
+Made changes.
+
 ## 4. Overwriting Clean Inputs: AI often uses schema.safeParse but forgets to reassign req.body to the resulting data, meaning the sanitised values (like trimmed strings) never make it to the controllers.

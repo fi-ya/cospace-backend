@@ -8,7 +8,12 @@ export function errorHandler(
 	_next: NextFunction,
 ): void {
 	if (err instanceof ZodError) {
-		res.status(400).json({ error: "Validation failed", details: err.issues });
+		const fieldErrors = err.issues.map((issue) => ({
+			field: issue.path.join("."),
+			message: issue.message,
+		}));
+
+		res.status(400).json({ error: "Validation failed", fieldErrors });
 		return;
 	}
 
