@@ -164,3 +164,58 @@ This is the same higher-order pattern used by Express's own `express.static(dir)
 
 ### 4. Global Error Catching
 #### Learn how Express identifies error handlers using four distinct **parametersv, preventing raw code stacks from leaking to clients.
+
+Using the current `errorHandler.ts` as the concrete example:
+
+```ts
+export function errorHandler(
+	err: unknown,
+	_req: Request,
+	res: Response,
+	_next: NextFunction,
+): void {
+	console.error(err instanceof Error ? err.stack : err);
+	res.status(500).json({ error: "Internal Server Error" });
+}
+```
+
+**How Express identifies an error handler**
+
+Express inspects the *arity* (parameter count) of every middleware function it's given. A normal middleware or route handler has three parameters:
+
+```ts
+(req, res, next) => { ... }
+```
+
+An error handler must have exactly **four**:
+
+```ts
+(err, req, res, next) => { ... }
+```
+
+This isn't a TypeScript type distinction — it's how Express's JavaScript runtime literally checks `fn.length` when deciding whether a registered function is a regular middleware or an error-handling middleware. If you write only three parameters, Express treats it as normal middleware and it will never receive errors.
+
+**Why `_req` and `_next` still need to be there**
+
+Even though this handler doesn't use `req` or `next`, they must remain in the signature (prefixed with `_` to signal "intentionally unused") — removing either would drop the function back to three parameters and Express would stop recognizing it as an error handler.
+
+**How errors reach it**
+
+Express only invokes error handlers when something calls `next(err)` with an argument, or when a synchronous exception is thrown inside a regular route/middleware. Because of this, `errorHandler` must be registered *after* all routes:
+
+```ts
+app.use("/bookings", auth, bookingRouter);
+
+app.use(errorHandler);
+```
+
+If a booking route throws, Express skips every remaining normal middleware and jumps straight to the first four-parameter handler it finds — this one.
+
+**Preventing stack leaks**
+
+```ts
+console.error(err instanceof Error ? err.stack : err);
+res.status(500).json({ error: "Internal Server Error" });
+```
+
+The stack trace is logged server-side only, via `console.error`. The client response is a generic, fixed message — no file paths, line numbers, or exception internals ever reach the caller. This separation (verbose logs for developers, opaque message for clients) is the whole point of centralizing error handling in one place instead of leaking `err.message` or `err.stack` directly into `res.json()`.
