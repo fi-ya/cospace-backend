@@ -1,16 +1,10 @@
-export interface Booking {
-	id: string;
-	desk: string;
-	floor: number;
-	date: string;
-	active: boolean;
-}
+import { Booking } from "../schemas/booking.schema";
 
 export class BookingRepository {
 	private readonly bookings: Booking[] = [
-		{ id: "1", desk: "Desk-01", floor: 1, date: "2026-09-21", active: true },
-		{ id: "2", desk: "Desk-02", floor: 1, date: "2026-09-22", active: true },
-		{ id: "3", desk: "Desk-03", floor: 2, date: "2026-09-23", active: false },
+		{ id: "1", desk: "Desk-01", floor: "Floor 1", date: "2026-09-21", active: true },
+		{ id: "2", desk: "Desk-02", floor: "Floor 1", date: "2026-09-22", active: true },
+		{ id: "3", desk: "Desk-03", floor: "Floor 2", date: "2026-09-23", active: false },
 	];
 
 	findAll(): Booking[] {

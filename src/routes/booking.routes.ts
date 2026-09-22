@@ -1,8 +1,8 @@
 import { Request, Response, Router } from "express";
-import { Booking } from "../repositories/booking.repository";
+import { Booking, createBookingSchema } from "../schemas/booking.schema";
 import { BookingController } from "../controllers/booking.controller";
 import { auth } from "../middleware/auth";
-import { validate } from "../middleware/validate";
+import { validateSchema } from "../middleware/validate";
 
 const router = Router();
 const bookingController = new BookingController();
@@ -12,7 +12,7 @@ router.get("/:id", (req, res) => bookingController.getById(req, res));
 router.post(
 	"/",
 	auth,
-	validate(["desk", "floor"]),
+	validateSchema(createBookingSchema),
 	(req: Request<Record<string, never>, Booking, Booking>, res: Response) =>
 		bookingController.create(req, res),
 );

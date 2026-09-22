@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Booking } from "../repositories/booking.repository";
+import { Booking } from "../schemas/booking.schema";
 import { BookingService } from "../services/booking.service";
 
 export class BookingController {
