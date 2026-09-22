@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import bookingRouter from "./routes/booking.routes";
 import { logger } from "./middleware/logger";
+import { auth } from "./middleware/auth";
 
 const app = express();
 const port = 5000;
@@ -17,7 +18,8 @@ app.get("/", (req: Request, res: Response) => {
 	});
 });
 
-app.use("/bookings", bookingRouter);
+app.use("/bookings", auth, bookingRouter);
+
 
 const server = app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
