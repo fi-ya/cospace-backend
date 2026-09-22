@@ -7,4 +7,9 @@ export const createBookingSchema = z.object({
 	active: z.boolean().default(true),
 });
 
+export const bookingSchema = createBookingSchema.extend({
+	id: z.string(),
+});
+
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+export type Booking = z.infer<typeof bookingSchema>;

@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-import { Booking } from "../repositories/booking.repository";
+import { Booking } from "../schemas/booking.schema";
 import { BookingController } from "../controllers/booking.controller";
 import { auth } from "../middleware/auth";
 import { validate } from "../middleware/validate";

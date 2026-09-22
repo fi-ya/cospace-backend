@@ -1,7 +1,5 @@
-import {
-	Booking,
-	BookingRepository,
-} from "../repositories/booking.repository";
+import { BookingRepository } from "../repositories/booking.repository";
+import { Booking } from "../schemas/booking.schema";
 
 export class BookingService {
 	constructor(private readonly bookingRepository: BookingRepository = new BookingRepository()) {}

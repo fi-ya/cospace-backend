@@ -116,3 +116,27 @@ Because it only calls `next()` on success, `validateSchema` behaves as a gate, i
 --- 
 
 # MASTERY
+
+## 1. Duplicate Type Defs: AI often keeps writing manual "interface Booking" declarations alongside the Zod schema, meaning you have to update both files whenever a database column changes.
+
+Summary of the change:
+
+**`booking.schema.ts`** — added `bookingSchema` (extends `createBookingSchema` with `id: z.string()`) and:
+
+```ts
+export type Booking = z.infer<typeof bookingSchema>;
+```
+
+**`booking.repository.ts`** — deleted the manual `interface Booking`, now imports `Booking` from the schema. Updated seed data: `floor` changed from `number` (`1`, `2`) to `string` (`"Floor 1"`, `"Floor 2"`) to match the schema's `floor: z.string().trim().min(5).max(200)`.
+
+**`booking.service.ts`**, **`booking.controller.ts`**, **`booking.routes.ts`** — all now import `Booking` from `../schemas/booking.schema` instead of the repository.
+
+Now there's a single source of truth: if a field is added, removed, or retyped on `createBookingSchema` or `bookingSchema`, every layer (repository, service, controller, routes) picks up the new shape automatically via `z.infer`, with no manual interface to keep in sync. `npx tsc --noEmit` passed.
+
+Made changes.
+
+## 2. Middleware Exception Eating: AI often catches validation errors directly in the middleware and returns responses, bypassing the global error handler and cluttering route scopes.
+
+## 3. Swallowing Structured Errors: AI-generated error handlers often log ZodError objects as raw strings, returning an unhelpful "Internal Server Error" message to the user
+
+## 4. Overwriting Clean Inputs: AI often uses schema.safeParse but forgets to reassign req.body to the resulting data, meaning the sanitised values (like trimmed strings) never make it to the controllers.
