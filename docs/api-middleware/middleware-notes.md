@@ -3,11 +3,7 @@
 ## Explore
 
 ### 1. Custom Request Logger
-Understand how to access the request object and pass execution down the chain using next().
-
-Read 
-
-Read 
+#### Understand how to access the request object and pass execution down the chain using next().
 
 Using the current `logger.ts` as the concrete example:
 
@@ -112,7 +108,59 @@ app.use("/bookings", auth, bookingRouter);
 Express evaluates middleware left to right, so `auth` gets first refusal on every `/bookings` request before any booking logic runs.
 
 ### 3. Body Schema Validation
-Understand how to write a reusable higher-order function that generates customised validation check-points.
+#### Understand how to write a reusable higher-order function that generates customised validation check-points.
+Using `validate.ts` as the concrete example:
+
+```ts
+export function validate(requiredFields: string[]) {
+	return (req: Request, res: Response, next: NextFunction): void => {
+		const missingFields = requiredFields.filter(
+			(field) => req.body?.[field] === undefined,
+		);
+
+		if (missingFields.length > 0) {
+			res.status(400).json({ error: "Missing required fields", missingFields });
+			return;
+		}
+
+		next();
+	};
+}
+```
+
+**What makes it a higher-order function**
+
+`validate` doesn't behave like `logger` or `auth`, which are middleware directly. Instead, `validate` is a *factory* — a function that takes configuration (`requiredFields`) and **returns** a new middleware function tailored to that configuration:
+
+```ts
+validate(string[]) -> (req, res, next) => void
+```
+
+It's "higher-order" because it returns a function rather than being the middleware itself.
+
+**Why this matters for reuse**
+
+Without this pattern, you'd need a separate hardcoded middleware for every combination of required fields — one for bookings, one for users, one for rooms. Instead, one generic function can generate any number of specialized checkpoints:
+
+```ts
+router.post("/", validate(["desk", "floor", "date"]), bookingController.create);
+router.post("/users", validate(["email", "firstName"]), userController.create);
+```
+
+Each call to `validate(...)` closes over its own `requiredFields` array via a closure — the returned function "remembers" the array it was created with, even though it runs later, inside Express's request cycle, with no direct access to the original call site.
+
+**The general shape**
+
+```ts
+function middlewareFactory(config) {
+	return (req, res, next) => {
+		// use `config` here
+	};
+}
+```
+
+This is the same higher-order pattern used by Express's own `express.static(dir)`, `cors(options)`, and similar configurable middleware — you're not writing the request handler yet, you're writing a function that produces one, customized by whatever arguments you pass in.
+
 
 ### 4. Global Error Catching
-Learn how Express identifies error handlers using four distinct **parametersv, preventing raw code stacks from leaking to clients.
+#### Learn how Express identifies error handlers using four distinct **parametersv, preventing raw code stacks from leaking to clients.
