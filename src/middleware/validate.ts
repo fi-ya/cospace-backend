@@ -17,15 +17,12 @@ export function validate(requiredFields: string[]) {
 }
 
 export function validateSchema(schema: ZodSchema) {
-	return (req: Request, res: Response, next: NextFunction): void => {
-		const result = schema.safeParse(req.body);
-
-		if (!result.success) {
-			res.status(400).json({ error: "Validation failed", details: result.error.issues });
-			return;
+	return (req: Request, _res: Response, next: NextFunction): void => {
+		try {
+			req.body = schema.parse(req.body);
+			next();
+		} catch (error) {
+			next(error);
 		}
-
-		req.body = result.data;
-		next();
 	};
 }

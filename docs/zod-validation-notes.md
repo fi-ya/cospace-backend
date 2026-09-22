@@ -137,6 +137,39 @@ Made changes.
 
 ## 2. Middleware Exception Eating: AI often catches validation errors directly in the middleware and returns responses, bypassing the global error handler and cluttering route scopes.
 
+Summary of the change:
+
+**`validate.ts`** — `validateSchema` no longer sends a response itself:
+
+```ts
+export function validateSchema(schema: ZodSchema) {
+	return (req: Request, _res: Response, next: NextFunction): void => {
+		try {
+			req.body = schema.parse(req.body);
+			next();
+		} catch (error) {
+			next(error);
+		}
+	};
+}
+```
+
+- Switched from `safeParse` to `parse`, which throws a `ZodError` on failure.
+- The `catch` block calls `next(error)` — passing the exception down the chain — instead of building a `res.status(400).json(...)` response directly in the middleware.
+
+**`errorHandler.ts`** — now the single place that formats the `400` response for validation failures:
+
+```ts
+if (err instanceof ZodError) {
+	res.status(400).json({ error: "Validation failed", details: err.issues });
+	return;
+}
+```
+
+Everything else (unknown errors) still falls through to the existing `500` response with server-side stack logging. This keeps `validateSchema` focused purely on parsing/transforming, while all response formatting for both validation and unexpected errors is centralized in `errorHandler`. TypeScript validation passed.
+
+Made changes.
+
 ## 3. Swallowing Structured Errors: AI-generated error handlers often log ZodError objects as raw strings, returning an unhelpful "Internal Server Error" message to the user
 
 ## 4. Overwriting Clean Inputs: AI often uses schema.safeParse but forgets to reassign req.body to the resulting data, meaning the sanitised values (like trimmed strings) never make it to the controllers.
