@@ -219,3 +219,30 @@ res.status(500).json({ error: "Internal Server Error" });
 ```
 
 The stack trace is logged server-side only, via `console.error`. The client response is a generic, fixed message — no file paths, line numbers, or exception internals ever reach the caller. This separation (verbose logs for developers, opaque message for clients) is the whole point of centralizing error handling in one place instead of leaking `err.message` or `err.stack` directly into `res.json()`.
+
+----
+
+# Manual Feedback & Correction Loop
+
+## Infinite Request Hangs: AI often writes conditional blocks where next() is only called in one branch, causing the client request to freeze indefinitely if it falls into the other branch.
+
+Both files pass the check — every execution path terminates correctly. No changes needed in either file.
+
+## Broken Error Signature: AI often drops the fourth parameter from the error handler (e.g., writing (err, req, res)), which makes Express treat it as standard middleware instead of an error handler.
+
+Already correct — the signature has exactly four parameters: err, _req, res, _next, matching Express's error-handler arity requirement
+
+## Bypassing TypeScript Types: AI commonly declares middleware parameters as any, disabling all editor warnings and type protections.
+
+All four middleware files already satisfy this, have zero any usage.
+
+
+## TypeScript Namespace Errors: If you want your authentication middleware to attach verified user data (like { role: 'admin' }) to req.user, TypeScript will throw a compilation error because user does not exist on Express's standard Request interface.
+
+- The import "express" (side-effect import) is required for TypeScript to treat this file as a module that can safely use declare global.
+- declare global { namespace Express { interface Request ... } } merges into Express's own Request interface rather than replacing it — all existing properties (params, body, headers, etc.) remain intact.
+- user is optional (?) since not every request will have it set (e.g. before auth middleware runs).
+
+Picked up automatically since tsconfig.json's include: ["src/**/*.ts"] covers express.d.ts. TypeScript validation passed — req.user is now a valid, typed property anywhere Request is used (e.g. in auth.ts if you assign req.user = { role: "admin" } after verifying a token
+
+## Global vs Route-Level Registration: AI often suggests registering everything globally, meaning public health routes or GET routes end up requiring authorization.
