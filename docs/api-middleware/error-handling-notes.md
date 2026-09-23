@@ -70,6 +70,88 @@ can now branch on the custom structural data this subclass adds, distinguishing 
 
 ### 2. Standardised Subclasses: Understand how to use inheritance to build focused, semantic exception classes.
 
+Using `BadRequestError` in `badRequestError.ts` alongside its parent `AppError` as the concrete example:
+
+```ts
+// src/utils/appError.ts
+export class AppError extends Error {
+	constructor(message: string, statusCode: number) {
+		super(message);
+		this.statusCode = statusCode;
+		this.status = `${statusCode}`.startsWith("4") ? "fail" : "error";
+		this.isOperational = true;
+		Error.captureStackTrace(this, this.constructor);
+	}
+}
+
+// src/errors/badRequestError.ts
+export class BadRequestError extends AppError {
+	constructor(message = "Bad Request") {
+		super(message, 400);
+	}
+}
+```
+
+**Two levels of inheritance, two levels of purpose**
+
+There are actually two `extends` relationships stacked here:
+
+```
+Error -> AppError -> BadRequestError
+```
+
+`Error -> AppError` is generic infrastructure: it teaches any application error how to carry a `statusCode`, a `status` string, and a captured stack trace — concerns shared by *every* operational error, regardless of what specifically went wrong.
+
+`AppError -> BadRequestError` is where semantic meaning enters. `BadRequestError` doesn't add any new *capability* — it doesn't introduce a new property or override any method — it only fixes one of `AppError`'s two constructor parameters to a constant:
+
+```ts
+super(message, 400);
+```
+
+**Why "fixing a parameter" counts as meaningful inheritance**
+
+Without `BadRequestError`, every place in the codebase that wants to reject malformed input would write:
+
+```ts
+throw new AppError("Desk name too short", 400);
+```
+
+repeating the literal `400` everywhere, with no compiler-enforced link between "this is a client input problem" and "the status code must be 400." By contrast:
+
+```ts
+throw new BadRequestError("Desk name too short");
+```
+
+The status code is no longer a piece of data the caller has to remember correctly — it's baked into the *type itself*. `BadRequestError` always means `400`. There's no way to accidentally throw a `BadRequestError` with statusCode `500`, because the subclass's constructor doesn't expose `statusCode` as a parameter at all.
+
+**Focused classes as self-documenting call sites**
+
+Compare:
+
+```ts
+throw new AppError("Booking not found", 404);
+```
+
+with:
+
+```ts
+throw new NotFoundError("Booking not found");
+```
+
+The second reads as intent, not implementation detail — a developer scanning the code immediately understands *what kind* of failure this is without needing to know or check the numeric status code. This is the core value of building a small hierarchy of subclasses rather than one flat `AppError` class used everywhere with different numbers passed in: each subclass name (`BadRequestError`, `UnauthorizedError`, `ForbiddenError`, `NotFoundError`) documents the semantic category of failure at the point where it's thrown.
+
+**How this pays off in a catch block**
+
+Because every subclass is still `instanceof AppError` (and therefore `instanceof Error`), a single error handler can catch all of them uniformly:
+
+```ts
+if (err instanceof AppError) {
+	res.status(err.statusCode).json({ status: err.status, message: err.message });
+}
+```
+
+The handler never needs to know about `BadRequestError` or `NotFoundError` specifically — it only relies on the shared `AppError` contract (`statusCode`, `status`, `message`). The subclasses exist purely to make the *throwing* code expressive and correct by construction, while the *handling* code stays generic and doesn't grow a new branch every time a new semantic error type is added.
+
 ### 3. Centralised Handler Update: Master the logic needed to separate trusted system exceptions from unexpected code failures.
 
 ---
