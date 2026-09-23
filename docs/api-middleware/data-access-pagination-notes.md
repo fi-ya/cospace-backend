@@ -206,7 +206,7 @@ This chains two operations: first the same string→number conversion with a `10
 ## Step 3: MASTERY -> Parsing queries safely, preventing negative boundary errors, and calculating pages
 They often trust client-provided queries blindly, leading to NaN (Not-a-Number) runtime crashes, allow negative page numbers that break array slicing, or fail to enforce maximum limit restrictions, leaving the server vulnerable to bulk extraction requests.
 
-### 1. Unsafe Number Conversions; - fix applied
+### 1. Unsafe Number Conversions; - fix applied ->  `?page=abc?limit=`,
 
 Ran terminal command:  curl -sS 'http://localhost:5000/bookings?page=abc&limit=xyz'
 Ran terminal command:  curl -sS 'http://localhost:5000/bookings?page=2&limit=1'
@@ -253,9 +253,68 @@ const limit = Math.min(
 
 Verified live: `?page=0&limit=-5` → `currentPage: 1, itemsPerPage: 1`; `?page=-3&limit=0` → same clamped result. No negative `skip` values can reach `bookingRepository.findPaginated`. TypeScript validation passed.
 
-### 3. Bulk Extraction Vulnerability
+### 3. Bulk Extraction Vulnerability -> No change required
 
-### 4. Broken Meta Calculations
-### 5. Complete CRUD Errors
+
+This ceiling is already in place from the previous change — `Math.min(..., 50)`. Let me verify with the specific attack scenario described (`?limit=1000000`):   
+
+Ran terminal command:  curl -sS 'http://localhost:5000/bookings?limit=1000000'
+
+Confirmed: `?limit=1000000` returns `itemsPerPage: 50`, not `1000000` — the ceiling holds regardless of how large the client-requested value is. Stopping the server.     
+
+```ts
+const limit = Math.min(
+	Math.max(this.parseIntWithDefault(req.query.limit, 10), 1),
+	50,
+);
+```
+
+Verified live against the exact attack scenario: `?limit=1000000` returns `itemsPerPage: 50`, not `1000000`. The ceiling is a hard cap applied unconditionally in the controller, so no requested value (however large) can bypass it before reaching `BookingService.getPaginatedShifts` or `BookingRepository.findPaginated`.
+
+### 4. Broken Meta Calculations -> No change required
+
+Already correct — no change needed. `getPaginatedShifts` already uses `Math.ceil(totalItems / limit)`, so:
+
+```ts
+const totalPages = Math.ceil(totalItems / limit);
+```
+
+For 21 bookings with `limit=10`: `21 / 10 = 2.1` → `Math.ceil(2.1) = 3`, correctly counting the partial 11th–21st page as a full third page rather than truncating it. `Math.floor` or plain integer division would have silently dropped that final partial page from the total. 
+
+### 5. Complete CRUD Errors - No change required
+
+Already correct — no change needed. `BookingService.update` and `BookingService.delete` both propagate `undefined` when the repository's `findIndex` returns `-1` (no matching `id`):
+
+```ts
+update(id: string, data: Partial<Booking>): Booking | undefined {
+	return this.bookingRepository.update(id, data);
+}
+
+delete(id: string): Booking | undefined {
+	return this.bookingRepository.delete(id);
+}
+```
+
+And both controller methods already check for that `undefined` and translate it into a `404` before attempting any further logic:
+
+```ts
+const booking = this.bookingService.update(req.params.id, req.body);
+
+if (!booking) {
+	res.status(404).json({ error: "Booking not found" });
+	return;
+}
+```
+
+```ts
+const booking = this.bookingService.delete(req.params.id);
+
+if (!booking) {
+	res.status(404).json({ error: "Booking not found" });
+	return;
+}
+```
+
+This satisfies the "return undefined for the controller to handle as 404" approach — the service never mutates data for a non-existent `id` (the repository's own `findIndex === -1` guard prevents any array write), so the data state stays clean. 
 
 ## Step 4: Showcase -> Performing boundary testing, invoking validation rules, and submitting clean git branches
