@@ -214,10 +214,34 @@ The property is set on every `AppError` (`this.isOperational = true`), but the c
 
 ## The Mastery (Manual Feedback & Correction Loop) - 50min
 
-## 1. Broken Prototype Chains
+## 1. Broken Prototype Chains -> it's an ES5-target issue
+Updated `appError.ts`:
+
+```ts
+this.statusCode = statusCode;
+this.status = `${statusCode}`.startsWith("4") ? "fail" : "error";
+this.isOperational = true;
+
+// re-link the prototype chain so `instanceof` resolves correctly for every subclass
+Object.setPrototypeOf(this, new.target.prototype);
+
+Error.captureStackTrace(this, this.constructor);
+```
+
+I placed this fix only in the base `AppError` constructor rather than duplicating it in each of the four subclasses (`BadRequestError`, `UnauthorizedError`, `ForbiddenError`, `NotFoundError`). This is sufficient: `new.target` refers to whichever constructor was *actually invoked with `new`* — so `new NotFoundError(...)` gives `new.target.prototype === NotFoundError.prototype`, not `AppError.prototype`. A single line in the shared base class correctly re-links the prototype for every subclass, since each subclass's `super(message, statusCode)` call runs this same line with a different `new.target`.
+
+Verified with a live request through the existing `/boom-app-error` route (which throws `NotFoundError`, a subclass): `err instanceof AppError` still resolves to `true` in `errorHandler.ts`, returning the correct `404` with the proper shape. TypeScript validation passed.
+
+One note: this project's `tsconfig.json` targets `es2022`, where this specific prototype-breaking bug doesn't actually occur (it's an ES5-target issue) — but the fix is a correct, harmless safeguard regardless, and worth keeping in case the target ever changes.
+
 ## 2. Missing Catch Triggers
+
+
+
 ## 3. Leaking Raw System Secrets
+
 ## 4. Raw Numeric Magic Numbers
+
 ## 5. Swallowing Express Errors
 
 ---
@@ -225,6 +249,9 @@ The property is set on every `AppError` (`this.isOperational = true`), but the c
 ## Showcase & Technical Demo - 20min
 
 ## 1. 404 Resource Demonstration -> Explain how the service layer detected a missing resource, threw a NotFoundError, and passed it down to the global error middleware.
+
 ## 2. 400 Validation Validation -> Walk through how Zod exceptions are intercepted in the global handler, maintaining the exact same JSON shape as other application errors.
+
 ## 3. 401 and 403 Security Checks -> Discuss why clear differences between 401 (who are you?) and 403 (you cannot do this) are essential for frontend access control.
+
 ## 4. Safe 500 System Isolation -> Explain why masking non-operational errors is a critical security rule that prevents hackers from gathering details about your server environments.

@@ -10,6 +10,9 @@ export class AppError extends Error {
 		this.status = `${statusCode}`.startsWith("4") ? "fail" : "error";
 		this.isOperational = true;
 
+		// re-link the prototype chain so `instanceof` resolves correctly for every subclass
+		Object.setPrototypeOf(this, new.target.prototype);
+
 		Error.captureStackTrace(this, this.constructor);
 	}
 }
