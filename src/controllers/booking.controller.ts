@@ -7,8 +7,23 @@ export class BookingController {
 		private readonly bookingService: BookingService = new BookingService(),
 	) {}
 
-	getAll = (_req: Request, res: Response): void => {
-		res.status(200).json(this.bookingService.findAll());
+	private parseIntWithDefault(value: unknown, defaultValue: number): number {
+		const parsed = parseInt(String(value), 10);
+		return Number.isNaN(parsed) ? defaultValue : parsed;
+	}
+
+	getAll = (req: Request, res: Response): void => {
+		// ensure page is at least 1
+		const page = Math.max(this.parseIntWithDefault(req.query.page, 1), 1);
+
+		// ensure limit is at least 1 and at most 50 - default page size (10) and max (50), per project conventions
+		const limit = Math.min(
+			Math.max(this.parseIntWithDefault(req.query.limit, 10), 1),
+			50,
+		);
+
+		const result = this.bookingService.getPaginatedShifts(page, limit);
+		res.status(200).json(result);
 	};
 
 	getById = (req: Request<{ id: string }>, res: Response): void => {
