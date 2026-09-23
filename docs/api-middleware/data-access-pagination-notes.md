@@ -147,6 +147,60 @@ The controller's job is to read HTTP query parameters and format an HTTP respons
 
 ### 3. Controller Payload Handling: Master the extraction and conversion of URL query parameters from strings into runtime integers.
 
+- `Number(req.query.page) || 1` — falls back to 1 when page is missing or NaN.
+- `Number(req.query.limit) || 10` — falls back to 10 per the project's documented default page size, then Math.min(..., 50) enforces the documented maximum of 50.
+- Passes both to getPaginatedShifts and returns the { data, meta } payload directly.
+- Verified live: GET /bookings (no params) returned meta.itemsPerPage: 10, currentPage: 1; GET `/bookings?page=2&limit=1` returned the correct second item with totalPages
+
+Using `getAll` in `booking.controller.ts` as the concrete example:
+
+```ts
+const page = Number(req.query.page) || 1;
+const limit = Math.min(Number(req.query.limit) || 10, 50);
+```
+
+**Why extraction is needed at all**
+
+Express parses URL query strings into `req.query`, but every value there is a *string* (or nested object/array for complex query strings) — never a number. For:
+
+```ts
+GET /bookings?page=2&limit=1
+```
+
+`req.query.page` is the string `"2"`, not the number `2`. If you passed this string straight to `getPaginatedShifts`, the arithmetic inside the service (`(page - 1) * limit`) would still technically work in JavaScript due to implicit coercion, but it's fragile and TypeScript's type system doesn't sanction it — `getPaginatedShifts(page: number, limit: number)` expects real numbers, not `string | ParsedQs`.
+
+**The conversion step**
+
+```ts
+Number(req.query.page)
+```
+
+`Number()` is a built-in conversion function: given a numeric-looking string like `"2"`, it returns `2`. Given something non-numeric (`undefined`, `""`, `"abc"`), it returns `NaN`.
+
+**Handling missing or invalid values**
+
+```ts
+Number(req.query.page) || 1
+```
+
+This is where the fallback default comes in. `NaN` is falsy in JavaScript, and so is `0` and `undefined`. The `||` operator evaluates the left side first; if it's falsy, it evaluates and returns the right side instead:
+
+- `req.query.page` missing → `Number(undefined)` → `NaN` → falsy → falls back to `1`.
+- `req.query.page = "abc"` → `Number("abc")` → `NaN` → falsy → falls back to `1`.
+- `req.query.page = "2"` → `Number("2")` → `2` → truthy → keeps `2`.
+
+**Enforcing an upper bound alongside the conversion**
+
+```ts
+Math.min(Number(req.query.limit) || 10, 50)
+```
+
+This chains two operations: first the same string→number conversion with a `10` fallback, then `Math.min(value, 50)` clamps the result so it can never exceed `50`, regardless of what the client requested (`?limit=1000` becomes `50`). This directly matches the project's documented convention: default page size `10`, maximum `50`.
+
+**Why this happens in the controller, not deeper layers**
+
+`req.query` only exists at the HTTP boundary — `BookingService.getPaginatedShifts` and `BookingRepository.findPaginated` both operate on plain `number` parameters and have no knowledge of Express or query strings at all. The controller is exactly the layer responsible for this string-to-number extraction, because it's the only layer that ever touches `req` directly; everything below it receives already-converted, already-defaulted numeric values.
+
 ---
 
 ## Step 3: MASTERY -> Parsing queries safely, preventing negative boundary errors, and calculating pages

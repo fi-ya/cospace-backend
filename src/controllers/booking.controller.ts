@@ -7,8 +7,13 @@ export class BookingController {
 		private readonly bookingService: BookingService = new BookingService(),
 	) {}
 
-	getAll = (_req: Request, res: Response): void => {
-		res.status(200).json(this.bookingService.findAll());
+	getAll = (req: Request, res: Response): void => {
+		const page = Number(req.query.page) || 1;
+		// default page size (10) and max (50), per project conventions
+		const limit = Math.min(Number(req.query.limit) || 10, 50);
+
+		const result = this.bookingService.getPaginatedShifts(page, limit);
+		res.status(200).json(result);
 	};
 
 	getById = (req: Request<{ id: string }>, res: Response): void => {
