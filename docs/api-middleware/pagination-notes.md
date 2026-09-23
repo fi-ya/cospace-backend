@@ -318,3 +318,247 @@ if (!booking) {
 This satisfies the "return undefined for the controller to handle as 404" approach — the service never mutates data for a non-existent `id` (the repository's own `findIndex === -1` guard prevents any array write), so the data state stays clean. 
 
 ## Step 4: Showcase -> Performing boundary testing, invoking validation rules, and submitting clean git branches
+
+### 1. Offset Pagination Tracing: Explain how the server calculates the skip offset behind the scenes to slice out distinct elements of the array without duplicate items.
+
+Using `getPaginatedShifts` and `findPaginated` together as the concrete example:
+
+```ts
+// booking.service.ts
+const skip = (page - 1) * limit;
+const data = this.bookingRepository.findPaginated(skip, limit);
+
+// booking.repository.ts
+findPaginated(skip: number, limit: number): Booking[] {
+	return this.bookings.slice(skip, skip + limit);
+}
+```
+
+**The core formula**
+
+```ts
+skip = (page - 1) * limit
+```
+
+The `-1` is what makes page numbering start at `1` for humans while indices start at `0` internally. Page `1` should skip *nothing*, so subtracting 1 before multiplying converts a 1-based page number into a 0-based offset.
+
+**Walking through concrete numbers (limit = 10)**
+
+| page | `(page - 1) * limit` | skip | slice range | items covered |
+|---|---|---|---|---|
+| 1 | `(1-1) * 10` | 0 | `slice(0, 10)` | indices 0–9 |
+| 2 | `(2-1) * 10` | 10 | `slice(10, 20)` | indices 10–19 |
+| 3 | `(3-1) * 10` | 20 | `slice(20, 30)` | indices 20–29 |
+
+**Why this produces distinct, non-overlapping slices**
+
+Each page's `skip` value is exactly `limit` greater than the previous page's `skip`. That's the guarantee against duplicates: page 1 covers indices `[0, 10)`, page 2 covers `[10, 20)` — the boundary at index `10` belongs to page 2 only, because `slice(0, 10)` is exclusive of its end index. There's no index that ever falls into two different pages' ranges, and no index between pages is skipped over entirely, as long as `limit` stays constant across requests.
+
+**Why `end = skip + limit`, not a separate variable**
+
+```ts
+this.bookings.slice(skip, skip + limit)
+```
+
+`slice`'s second argument is the *exclusive end index*, so adding `limit` to `skip` naturally produces "however many items past the starting offset." This is why the repository method only needs two parameters (`skip`, `limit`) rather than three (`start`, `end`, `limit`) — the end boundary is always derivable from the other two.
+
+**What happens at the tail end of the array**
+
+If `totalItems = 3` and a client requests `page = 1, limit = 10`:
+
+```ts
+skip = 0
+this.bookings.slice(0, 10)
+```
+
+`slice` doesn't error when `end` exceeds the array's actual length — it simply returns everything available from `skip` onward (all 3 items here), rather than padding with `undefined` or throwing. This is why no special-casing is needed for the last page: the same formula that works for full pages also correctly returns a partial final page.
+
+### 2. Parameter Validation Guard: Describe how robust query sanitisation prevents runtime calculations from failing on invalid string inputs.
+Using `parseIntWithDefault` and the `Math.max`/`Math.min` clamps in `booking.controller.ts` as the concrete example:
+
+```ts
+private parseIntWithDefault(value: unknown, defaultValue: number): number {
+	const parsed = parseInt(String(value), 10);
+	return Number.isNaN(parsed) ? defaultValue : parsed;
+}
+
+getAll = (req: Request, res: Response): void => {
+	const page = Math.max(this.parseIntWithDefault(req.query.page, 1), 1);
+	const limit = Math.min(
+		Math.max(this.parseIntWithDefault(req.query.limit, 10), 1),
+		50,
+	);
+
+	const result = this.bookingService.getPaginatedShifts(page, limit);
+	...
+};
+```
+
+**What "invalid string input" actually looks like at this boundary**
+
+`req.query` values are always strings (or absent) — there's no type enforcement on a URL. A client can send `?page=abc`, `?page=`, `?page=-3`, or omit `page` entirely, and Express will hand all of these to the controller without complaint.
+
+**Sanitisation step 1: eliminating `NaN` before it can propagate**
+
+```ts
+const parsed = parseInt(String(value), 10);
+return Number.isNaN(parsed) ? defaultValue : parsed;
+```
+
+`parseInt("abc", 10)` produces `NaN`. If that `NaN` were allowed to flow downstream unchecked, every arithmetic operation that touches it becomes `NaN` too — `(page - 1) * limit` becomes `NaN`, `this.bookings.slice(NaN, NaN)` returns an empty array with no error thrown, and the client silently gets zero results with no indication anything went wrong. The `Number.isNaN` check catches this at the very first point the string is converted, substituting a safe default (`1` or `10`) instead of letting the invalid value travel any further.
+
+**Sanitisation step 2: eliminating out-of-range numbers, not just non-numbers**
+
+A string like `"0"` or `"-3"` parses to a perfectly valid *number* — `parseInt` succeeds, `Number.isNaN` is `false` — but it's still semantically invalid for pagination. This is why sanitisation doesn't stop at "is it a number?":
+
+```ts
+Math.max(parsedPage, 1)
+```
+
+forces any page `≤ 0` up to `1`, and:
+
+```ts
+Math.min(Math.max(parsedLimit, 1), 50)
+```
+
+forces `limit` into the closed range `[1, 50]` regardless of what was requested (`0`, `-5`, or `1000000`).
+
+**Why this prevents calculation failures specifically**
+
+The downstream calculation:
+
+```ts
+const skip = (page - 1) * limit;
+```
+
+only produces a valid, non-negative array offset because `page` and `limit` have already been guaranteed to be real, positive numbers by the time this line runs. Without that guarantee, a negative `page` would produce a negative `skip`, and `this.bookings.slice(-10, ...)` interprets negative indices as "count from the end of the array" — silently returning the *wrong* elements rather than throwing an error, which is arguably worse than a crash because the bug is invisible until someone notices the returned data doesn't match the requested page.
+
+**The overall effect**
+
+By the time `page` and `limit` reach `bookingService.getPaginatedShifts`, they are guaranteed to be well-formed integers within a known safe range — every layer beneath the controller (`BookingService`, `BookingRepository`) can perform its arithmetic without any additional validation, because the boundary sanitisation has already ruled out every input shape that could cause `NaN`, negative offsets, or unbounded memory use.
+
+### 3. CRUD Lifecycle Demonstration: Walk through how our architectural layers cooperate to ensure all CRUD changes are checked, validated, and logged from start to finish.
+
+Read , lines 1 to 25
+
+Read 
+
+Using an actual `POST /bookings` request as the concrete walkthrough, since it exercises every layer in this codebase:
+
+**1. Global middleware (`index.ts`)**
+
+```ts
+app.use(express.json());
+app.use(logger);
+```
+
+Every request, regardless of route, passes through these first. `express.json()` parses the raw request body into `req.body`. `logger` then records the method, path, and timestamp to the console before calling `next()` — this is the "logged from start" part, and it happens unconditionally, before the request even reaches route matching.
+
+**2. Route-level middleware chain (`booking.routes.ts`)**
+
+```ts
+router.post(
+	"/",
+	auth,
+	validateSchema(createBookingSchema),
+	(req, res) => bookingController.create(req, res),
+);
+```
+
+For `POST /bookings` specifically, two more gatekeepers run in order:
+
+- `auth` checks the `Authorization` header. If it doesn't match, it responds `401` directly and calls `next()` never — the chain stops here, and nothing below (validation, controller, service, repository) ever executes.
+- `validateSchema(createBookingSchema)` runs only if `auth` passed. It parses `req.body` against the Zod schema, reassigns `req.body` to the sanitised result (trimmed strings, defaulted `active`), and calls `next()` — or, on failure, calls `next(error)` with a `ZodError`, diverting straight to the global error handler instead of the controller.
+
+**3. Controller (`booking.controller.ts`)**
+
+```ts
+create = (req, res): void => {
+	try {
+		const booking = this.bookingService.create(req.body);
+		res.status(201).json(booking);
+	} catch (error: unknown) {
+		res.status(400).json({ error: this.getErrorMessage(error) });
+	}
+};
+```
+
+By the time execution reaches here, `req.body` is guaranteed to be the already-validated, already-sanitised object. The controller's only job is to extract it and hand it to the service, then translate whatever comes back into an HTTP response.
+
+**4. Service (`booking.service.ts`)**
+
+```ts
+create(booking: Booking): Booking {
+	if (booking.desk.length < 3) {
+		throw new Error("Desk name must be at least 3 characters long");
+	}
+
+	return this.bookingRepository.create(booking);
+}
+```
+
+This is a second, independent check — business-rule validation, distinct from the schema's structural validation. Even though `validateSchema` already enforced `desk.length >= 3` via Zod, the service layer doesn't rely on that; it re-asserts the rule itself so this class remains correct even if called from somewhere that skipped the middleware (a test, a script, a future internal call).
+
+**5. Repository (`booking.repository.ts`)**
+
+```ts
+create(booking: Booking): Booking {
+	this.bookings.push(booking);
+	return booking;
+}
+```
+
+Only after both the middleware chain and the service's business check succeed does the in-memory array actually get mutated. This is the last link in the chain — pure storage, no validation logic of its own.
+
+**6. Errors flow back through the same layers**
+
+If anything fails at any point — `auth` rejects the header, `validateSchema` throws a `ZodError`, or `BookingService.create` throws its business error — the response is generated by whichever layer detected the problem (`auth`/`validateSchema` divert to `errorHandler`; the service's thrown `Error` is caught by the controller's own `try/catch`). Either way, the request never reaches the repository, so the in-memory array is never mutated by a request that failed validation.
+
+**Why this layering matters for "checked, validated, and logged from start to finish"**
+
+Every request is logged once, globally, regardless of outcome. Every mutating request passes through authentication and schema validation before the controller. Every create/update operation passes through a second, independent business-rule check in the service. And the repository — the only layer that actually changes state — is never reached unless every preceding check passed. No single layer is trusted to catch everything; each one enforces its own concern, and a failure at any point stops the request before it can corrupt stored data.
+
+
+### 4. Accurate Metadata Verification: Explain why returning metadata alongside raw arrays is vital for frontend UI engineers to build responsive pagination controls.
+
+Using the actual response shape returned by this API as the concrete example:
+
+```json
+{
+  "data": [{ "id": "2", "desk": "Desk-02", "floor": "Floor 1", "date": "2026-09-22", "active": true }],
+  "meta": { "totalItems": 3, "itemsPerPage": 1, "currentPage": 2, "totalPages": 3 }
+}
+```
+
+**What the raw array alone cannot tell a frontend**
+
+If the API only returned `data` — just the array of bookings for the current page — a frontend has no way to answer basic UI questions:
+
+- "Is there a next page?" — the array of 1 item on page 2 looks identical whether there are 3 total bookings or 3,000. A frontend can't distinguish "this is the last page" from "there happen to be exactly this many items on every page."
+- "How many pages should the pagination control render?" — without a total count, there's no way to draw page number buttons (`1 2 3 ...`) or know when to stop.
+- "What page am I currently viewing?" — if the frontend's own request state gets out of sync (e.g. after a refresh), there's no server-confirmed value to reconcile against.
+
+**What each `meta` field answers directly**
+
+```json
+"meta": { "totalItems": 3, "itemsPerPage": 1, "currentPage": 2, "totalPages": 3 }
+```
+
+- `totalItems` — lets the UI show "3 results" or "showing 2 of 3", without the frontend needing to make a separate `count`-only request.
+- `itemsPerPage` — confirms what the server actually applied (recall the earlier ceiling: a client requesting `?limit=1000000` gets back `itemsPerPage: 50`, not their requested value). The frontend can detect and reflect the *actual* enforced limit rather than assuming its own request was honored exactly.
+- `currentPage` — echoes back which page the server believes it served, letting the UI highlight the correct page number in a pager component.
+- `totalPages` — the single number needed to decide whether "Next" should be disabled (`currentPage === totalPages`) and how many page buttons to render.
+
+**Why this must come from the server, not be inferred client-side**
+
+`totalPages` in this API is computed once, server-side, via:
+
+```ts
+const totalPages = Math.ceil(totalItems / limit);
+```
+
+using the *actual* `totalItems` count from `bookingRepository.count()` — a count the frontend has no direct way to obtain from a single page of data. If the frontend tried to guess `totalPages` by, say, assuming "if I got a full page of items, there's probably more," that guess breaks the moment `totalItems` is exactly divisible by `limit` (e.g. exactly 30 items with `limit=10` — is page 3 the last one, or is there a page 4 with zero items?). Only the server, which has visibility into the entire dataset via `count()`, can answer this unambiguously.
+
+**The practical UI consequence**
+
+Without `meta`, a frontend engineer building "Previous / Page 2 of ? / Next" controls would either have to make an extra round-trip just to fetch a total count, guess at pagination boundaries (risking an off-by-one "Next" button that leads to an empty page), or disable pagination controls entirely and just show "Load more" with no indication of total size. Bundling `meta` into the same response the data already comes from means the pagination UI can render correctly and completely from a single request, with server-verified numbers rather than client-side assumptions.
