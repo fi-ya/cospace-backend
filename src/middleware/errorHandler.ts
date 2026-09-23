@@ -1,5 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
+import { HttpStatus } from "../constants/httpStatus";
+import { AppError } from "../utils/appError";
 
 export function errorHandler(
 	err: unknown,
@@ -7,16 +9,47 @@ export function errorHandler(
 	res: Response,
 	_next: NextFunction,
 ): void {
+
+	// Handle malformed JSON bodies thrown by express.json() before anything else
+	if (err instanceof SyntaxError && "body" in err) {
+		res.status(HttpStatus.BAD_REQUEST).json({
+			status: "fail",
+			message: "Malformed JSON in request body",
+			errors: [],
+		});
+		return;
+	}
+
+	// Handle known AppError instances first
+	if (err instanceof AppError) {
+		res.status(err.statusCode).json({
+			status: err.status,
+			message: err.message,
+			errors: [],
+		});
+		return;
+	}
+
+	// Handle Zod validation errors next
 	if (err instanceof ZodError) {
 		const fieldErrors = err.issues.map((issue) => ({
 			field: issue.path.join("."),
 			message: issue.message,
 		}));
 
-		res.status(400).json({ error: "Validation failed", fieldErrors });
+		res.status(HttpStatus.BAD_REQUEST).json({
+			status: "fail",
+			message: "Validation failed",
+			errors: fieldErrors,
+		});
 		return;
 	}
 
+	// Anything reaching here is unexpected and not operational: log internally, never expose it
 	console.error(err instanceof Error ? err.stack : err);
-	res.status(500).json({ error: "Internal Server Error" });
+	res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+		status: "error",
+		message: "Something went wrong on our end",
+		errors: [],
+	});
 }

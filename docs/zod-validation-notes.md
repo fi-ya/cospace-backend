@@ -190,8 +190,6 @@ if (err instanceof ZodError) {
 
 Instead of dumping `err.issues` raw (with Zod's internal `code`, nested `path` arrays, etc.), each issue is now flattened into `{ field, message }` — e.g. for a missing `desk`, the response includes `{ "field": "desk", "message": "Required" }`. This satisfies the guard's purpose: exactly which fields failed and why, in a clean, predictable shape, while non-Zod errors still fall through to the generic `500` path with the stack logged server-side. TypeScript validation passed.
 
-Made changes.
-
 ## 4. Overwriting Clean Inputs: AI often uses schema.safeParse but forgets to reassign req.body to the resulting data, meaning the sanitised values (like trimmed strings) never make it to the controllers.
 
 validateSchema uses schema.parse(req.body) (not safeParse), and the parsed, sanitized result is reassigned directly:
