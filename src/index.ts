@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import bookingRouter from "./routes/booking.routes";
 import { logger } from "./middleware/logger";
 import { errorHandler } from "./middleware/errorHandler";
+import { NotFoundError } from "./errors/notFoundError";
 
 const app = express();
 const port = 5000;
@@ -19,6 +20,11 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/bookings", bookingRouter);
+
+// Route to trigger a test NotFoundError
+app.get("/boom-app-error", () => {
+	throw new NotFoundError("Test resource not found");
+});
 
 app.use(errorHandler);
 

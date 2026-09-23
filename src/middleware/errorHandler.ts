@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
+import { AppError } from "../utils/appError";
 
 export function errorHandler(
 	err: unknown,
@@ -7,6 +8,18 @@ export function errorHandler(
 	res: Response,
 	_next: NextFunction,
 ): void {
+
+	// Handle known AppError instances first
+	if (err instanceof AppError) {
+		res.status(err.statusCode).json({
+			status: err.status,
+			message: err.message,
+			errors: [],
+		});
+		return;
+	}
+
+	// Handle Zod validation errors next
 	if (err instanceof ZodError) {
 		const fieldErrors = err.issues.map((issue) => ({
 			field: issue.path.join("."),

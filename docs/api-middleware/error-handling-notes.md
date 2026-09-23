@@ -154,6 +154,62 @@ The handler never needs to know about `BadRequestError` or `NotFoundError` speci
 
 ### 3. Centralised Handler Update: Master the logic needed to separate trusted system exceptions from unexpected code failures.
 
+Read , lines 1 to 30
+
+Read , lines 1 to 30
+
+Noted — you've kept the `/boom-app-error` test route in `index.ts`; I won't remove it again since that was a deliberate undo on your part.
+
+Using `errorHandler.ts` and `AppError.isOperational` as the concrete example:
+
+```ts
+// appError.ts
+this.isOperational = true;
+
+// errorHandler.ts
+if (err instanceof AppError) {
+	res.status(err.statusCode).json({ status: err.status, message: err.message, errors: [] });
+	return;
+}
+
+console.error(err instanceof Error ? err.stack : err);
+res.status(500).json({ error: "Internal Server Error" });
+```
+
+**Two fundamentally different categories of failure**
+
+Every error a Node process can throw falls into one of two buckets:
+
+- **Trusted/operational errors** — failures the application anticipated and deliberately raised because a specific, known condition occurred: a booking wasn't found, an authorization header was missing, a desk name was too short. The code *knows exactly what went wrong* and *knows the correct HTTP response* for it.
+- **Unexpected/programmer errors** — failures nobody wrote code to anticipate: a typo causing `undefined.someProperty`, a third-party library throwing something unfamiliar, a bug in the code itself. Nobody decided in advance what these mean or what status code they deserve.
+
+**How `instanceof AppError` performs the separation**
+
+```ts
+if (err instanceof AppError) { ... }
+```
+
+This single check is the entire separation logic. `AppError` (and its subclasses `BadRequestError`, `NotFoundError`, etc.) is *only* ever constructed deliberately, at a specific point in application code, by a developer who explicitly decided "this situation means a 404" or "this situation means a 400." Because of that, if an error passes this check, it's provably a trusted, anticipated failure — there's no other code path that could produce an `AppError` instance by accident.
+
+Anything that *doesn't* pass this check — a raw `TypeError`, a database driver error, a bug — falls through to the second branch, which is the "I don't know what this is" path.
+
+**Why the two branches respond so differently**
+
+```ts
+// trusted: safe to expose to the client
+res.status(err.statusCode).json({ status: err.status, message: err.message, errors: [] });
+
+// unexpected: log internally, hide details from the client
+console.error(err instanceof Error ? err.stack : err);
+res.status(500).json({ error: "Internal Server Error" });
+```
+
+For a trusted `AppError`, `err.message` was written by the application itself specifically to be shown to an API consumer (`"Desk name must be at least 3 characters long"`) — it's safe to send verbatim. For an unexpected error, the message might contain a stack trace, a file path, or a fragment of a SQL query — none of which should ever reach a client, which is why it's routed to `console.error` (server-side only) and replaced with the generic `"Internal Server Error"` string in the response.
+
+**Why `isOperational` exists even though this handler doesn't check it yet**
+
+The property is set on every `AppError` (`this.isOperational = true`), but the current `instanceof AppError` check already achieves the separation without needing to read it. `isOperational` becomes useful in a more advanced setup — for example, a process-level `uncaughtException` handler that decides whether to let the server keep running (`isOperational === true`, a known/recoverable condition) or terminate the process entirely (`isOperational` absent/false, meaning the application's internal state might be corrupted in an unpredictable way). It's a marker for "was this failure something the application anticipated," independent of whichever specific handler happens to be reading it.
+
 ---
 
 ## The Mastery (Manual Feedback & Correction Loop) - 50min
