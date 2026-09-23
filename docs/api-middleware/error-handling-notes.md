@@ -234,6 +234,38 @@ Verified with a live request through the existing `/boom-app-error` route (which
 
 One note: this project's `tsconfig.json` targets `es2022`, where this specific prototype-breaking bug doesn't actually occur (it's an ES5-target issue) — but the fix is a correct, harmless safeguard regardless, and worth keeping in case the target ever changes.
 
+-- 
+
+Good question — the answer is nuanced, not a simple yes.
+
+**The `next(error)` change in `create`/`update` was necessary**, but not because the global error handler couldn't be reached otherwise. It's necessary because those two methods had an existing `try/catch` that was **swallowing** the exception and responding directly:
+
+```ts
+try {
+	const booking = this.bookingService.create(req.body);
+	res.status(201).json(booking);
+} catch (error: unknown) {
+	res.status(400).json({ error: this.getErrorMessage(error) }); // handled here, never reaches Express's error pipeline
+}
+```
+
+A globally registered `errorHandler` only runs for errors that actually enter Express's error-handling flow — either via an uncaught throw or an explicit `next(err)` call. Once your own `catch` block catches something and calls `res.json(...)` itself, that error is fully resolved by your code; Express has no way to intercept it afterward, regardless of how `errorHandler` is registered. So yes, that specific fix was required, given the try/catch existed.
+
+**However** — worth noting since this project uses Express 5 (`"express": "^5.2.1"` in `package.json`): Express 5 **automatically catches synchronous throws** (and rejected promises) inside route handlers and forwards them to the error-handling middleware on its own. If `create` had *no* `try/catch` at all:
+
+```ts
+create = (req, res): void => {
+	const booking = this.bookingService.create(req.body); // throws
+	res.status(201).json(booking);
+};
+```
+
+Express 5 would have caught that thrown `Error` automatically and routed it to `errorHandler` without any manual `next(error)` call — this is new behavior versus Express 4, which required either a `try/catch` + manual `next(err)`, or an async wrapper utility, for this to work.
+
+So an equally valid (arguably simpler) fix here would have been to **remove the try/catch entirely** in `create`/`update` and let Express 5's automatic forwarding handle it. Keeping the `try/catch` and explicitly calling `next(error)` — which is what I did, matching your original instruction — is also correct and more explicit, but it isn't the *only* way to get the same result on Express 5.
+
+**The part that was not strictly required**: adding `next: NextFunction` to `getAll`, `getById`, `patch`, and `delete` — none of them throw or catch anything, so nothing currently depends on that parameter being present. It's there purely as a defensive convention (so if error-throwing logic is added to those methods later, `next` is already available), not because the global error handler needs it.
+
 ## 2. Missing Catch Triggers
 
 

@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { Booking } from "../schemas/booking.schema";
 import { BookingService } from "../services/booking.service";
 
@@ -12,7 +12,7 @@ export class BookingController {
 		return Number.isNaN(parsed) ? defaultValue : parsed;
 	}
 
-	getAll = (req: Request, res: Response): void => {
+	getAll = (req: Request, res: Response, _next: NextFunction): void => {
 		// ensure page is at least 1
 		const page = Math.max(this.parseIntWithDefault(req.query.page, 1), 1);
 
@@ -26,7 +26,11 @@ export class BookingController {
 		res.status(200).json(result);
 	};
 
-	getById = (req: Request<{ id: string }>, res: Response): void => {
+	getById = (
+		req: Request<{ id: string }>,
+		res: Response,
+		_next: NextFunction,
+	): void => {
 		const booking = this.bookingService.findById(req.params.id);
 
 		if (!booking) {
@@ -40,18 +44,20 @@ export class BookingController {
 	create = (
 		req: Request<Record<string, never>, Booking, Booking>,
 		res: Response,
+		next: NextFunction,
 	): void => {
 		try {
 			const booking = this.bookingService.create(req.body);
 			res.status(201).json(booking);
 		} catch (error: unknown) {
-			res.status(400).json({ error: this.getErrorMessage(error) });
+			next(error);
 		}
 	};
 
 	update = (
 		req: Request<{ id: string }, Booking, Partial<Booking>>,
 		res: Response,
+		next: NextFunction,
 	): void => {
 		try {
 			const booking = this.bookingService.update(req.params.id, req.body);
@@ -63,11 +69,15 @@ export class BookingController {
 
 			res.status(200).json(booking);
 		} catch (error: unknown) {
-			res.status(400).json({ error: this.getErrorMessage(error) });
+			next(error);
 		}
 	};
 
-	patch = (req: Request<{ id: string }>, res: Response): void => {
+	patch = (
+		req: Request<{ id: string }>,
+		res: Response,
+		_next: NextFunction,
+	): void => {
 		const booking = this.bookingService.findById(req.params.id);
 
 		if (!booking) {
@@ -81,7 +91,11 @@ export class BookingController {
 		res.status(200).json(updatedBooking);
 	};
 
-	delete = (req: Request<{ id: string }>, res: Response): void => {
+	delete = (
+		req: Request<{ id: string }>,
+		res: Response,
+		_next: NextFunction,
+	): void => {
 		const booking = this.bookingService.delete(req.params.id);
 
 		if (!booking) {
@@ -91,8 +105,4 @@ export class BookingController {
 
 		res.status(204).send();
 	};
-
-	private getErrorMessage(error: unknown): string {
-		return error instanceof Error ? error.message : "Invalid booking";
-	}
 }
