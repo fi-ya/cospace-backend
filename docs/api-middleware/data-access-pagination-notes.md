@@ -231,10 +231,30 @@ getAll = (req: Request, res: Response): void => {
 - `Number.isNaN(parsed)` explicitly checks for parse failure and returns the caller-provided default (`1` for page, `10` for limit) — clearer intent than relying on `||`'s falsy coercion (which also happens to treat `0` as "missing," a subtle gotcha the explicit check avoids).
 - Verified live: `?page=abc&limit=xyz` safely falls back to `currentPage: 1, itemsPerPage: 10` instead of producing `NaN` anywhere in the pipeline; valid numeric params still behave correctly.
 
-### 2. Missing Bounds Constraints:
+### 2. Missing Bounds Constraints: - FIX APPLIED -> fixes: `page=0` and negative values: 
 
+Ran terminal command:  curl -sS 'http://localhost:5000/bookings?page=0&limit=-5'
+Ran terminal command:  curl -sS 'http://localhost:5000/bookings?page=-3&limit=0'
+
+Both cases confirmed: `page=0` and `page=-3` are both clamped to `currentPage: 1`; `limit=-5` and `limit=0` are both clamped to `itemsPerPage: 1`. No negative offsets reach the slicing logic. Stopping the server.     
+
+Updated `booking.controller.ts`:
+
+```ts
+const page = Math.max(this.parseIntWithDefault(req.query.page, 1), 1);
+const limit = Math.min(
+	Math.max(this.parseIntWithDefault(req.query.limit, 10), 1),
+	50,
+);
+```
+
+- `Math.max(..., 1)` on `page` forces `0` or any negative value up to `1`.
+- `Math.max(..., 1)` on `limit`, wrapped inside the existing `Math.min(..., 50)`, enforces the range `[1, 50]` — floors negative/zero limits to `1` while still capping oversized requests at `50`.
+
+Verified live: `?page=0&limit=-5` → `currentPage: 1, itemsPerPage: 1`; `?page=-3&limit=0` → same clamped result. No negative `skip` values can reach `bookingRepository.findPaginated`. TypeScript validation passed.
 
 ### 3. Bulk Extraction Vulnerability
+
 ### 4. Broken Meta Calculations
 ### 5. Complete CRUD Errors
 

@@ -13,9 +13,14 @@ export class BookingController {
 	}
 
 	getAll = (req: Request, res: Response): void => {
-		const page = this.parseIntWithDefault(req.query.page, 1);
-		// default page size (10) and max (50), per project conventions
-		const limit = Math.min(this.parseIntWithDefault(req.query.limit, 10), 50);
+		// ensure page is at least 1
+		const page = Math.max(this.parseIntWithDefault(req.query.page, 1), 1);
+
+		// ensure limit is at least 1 and at most 50 - default page size (10) and max (50), per project conventions
+		const limit = Math.min(
+			Math.max(this.parseIntWithDefault(req.query.limit, 10), 1),
+			50,
+		);
 
 		const result = this.bookingService.getPaginatedShifts(page, limit);
 		res.status(200).json(result);
