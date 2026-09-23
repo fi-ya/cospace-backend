@@ -12,7 +12,11 @@ export function errorHandler(
 
 	// Handle malformed JSON bodies thrown by express.json() before anything else
 	if (err instanceof SyntaxError && "body" in err) {
-		res.status(HttpStatus.BAD_REQUEST).json({ error: "Malformed JSON in request body" });
+		res.status(HttpStatus.BAD_REQUEST).json({
+			status: "fail",
+			message: "Malformed JSON in request body",
+			errors: [],
+		});
 		return;
 	}
 
@@ -33,11 +37,19 @@ export function errorHandler(
 			message: issue.message,
 		}));
 
-		res.status(HttpStatus.BAD_REQUEST).json({ error: "Validation failed", fieldErrors });
+		res.status(HttpStatus.BAD_REQUEST).json({
+			status: "fail",
+			message: "Validation failed",
+			errors: fieldErrors,
+		});
 		return;
 	}
 
 	// Anything reaching here is unexpected and not operational: log internally, never expose it
 	console.error(err instanceof Error ? err.stack : err);
-	res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: "Something went wrong on our end" });
+	res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+		status: "error",
+		message: "Something went wrong on our end",
+		errors: [],
+	});
 }

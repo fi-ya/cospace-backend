@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { HttpStatus } from "../constants/httpStatus";
+import { NotFoundError } from "../errors/notFoundError";
 import { Booking } from "../schemas/booking.schema";
 import { BookingService } from "../services/booking.service";
 
@@ -30,12 +31,12 @@ export class BookingController {
 	getById = (
 		req: Request<{ id: string }>,
 		res: Response,
-		_next: NextFunction,
+		next: NextFunction,
 	): void => {
 		const booking = this.bookingService.findById(req.params.id);
 
 		if (!booking) {
-			res.status(HttpStatus.NOT_FOUND).json({ error: "Booking not found" });
+			next(new NotFoundError("Booking not found"));
 			return;
 		}
 
@@ -64,7 +65,7 @@ export class BookingController {
 			const booking = this.bookingService.update(req.params.id, req.body);
 
 			if (!booking) {
-				res.status(HttpStatus.NOT_FOUND).json({ error: "Booking not found" });
+				next(new NotFoundError("Booking not found"));
 				return;
 			}
 
@@ -77,12 +78,12 @@ export class BookingController {
 	patch = (
 		req: Request<{ id: string }>,
 		res: Response,
-		_next: NextFunction,
+		next: NextFunction,
 	): void => {
 		const booking = this.bookingService.findById(req.params.id);
 
 		if (!booking) {
-			res.status(HttpStatus.NOT_FOUND).json({ error: "Booking not found" });
+			next(new NotFoundError("Booking not found"));
 			return;
 		}
 
@@ -95,12 +96,12 @@ export class BookingController {
 	delete = (
 		req: Request<{ id: string }>,
 		res: Response,
-		_next: NextFunction,
+		next: NextFunction,
 	): void => {
 		const booking = this.bookingService.delete(req.params.id);
 
 		if (!booking) {
-			res.status(HttpStatus.NOT_FOUND).json({ error: "Booking not found" });
+			next(new NotFoundError("Booking not found"));
 			return;
 		}
 

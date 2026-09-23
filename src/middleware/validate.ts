@@ -1,15 +1,19 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodSchema } from "zod";
-import { HttpStatus } from "../constants/httpStatus";
+import { BadRequestError } from "../errors/badRequestError";
 
 export function validate(requiredFields: string[]) {
-	return (req: Request, res: Response, next: NextFunction): void => {
+	return (req: Request, _res: Response, next: NextFunction): void => {
 		const missingFields = requiredFields.filter(
 			(field) => req.body?.[field] === undefined,
 		);
 
 		if (missingFields.length > 0) {
-			res.status(HttpStatus.BAD_REQUEST).json({ error: "Missing required fields", missingFields });
+			next(
+				new BadRequestError(
+					`Missing required fields: ${missingFields.join(", ")}`,
+				),
+			);
 			return;
 		}
 

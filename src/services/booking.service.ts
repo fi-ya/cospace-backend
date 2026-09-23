@@ -1,4 +1,5 @@
 import { BookingRepository } from "../repositories/booking.repository";
+import { BadRequestError } from "../errors/badRequestError";
 import { Booking } from "../schemas/booking.schema";
 
 export class BookingService {
@@ -39,7 +40,7 @@ export class BookingService {
 
 	create(booking: Booking): Booking {
 		if (booking.desk.length < 3) {
-			throw new Error("Desk name must be at least 3 characters long");
+			throw new BadRequestError("Desk name must be at least 3 characters long");
 		}
 
 		return this.bookingRepository.create(booking);
