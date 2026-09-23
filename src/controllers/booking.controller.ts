@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { HttpStatus } from "../constants/httpStatus";
 import { Booking } from "../schemas/booking.schema";
 import { BookingService } from "../services/booking.service";
 
@@ -23,7 +24,7 @@ export class BookingController {
 		);
 
 		const result = this.bookingService.getPaginatedShifts(page, limit);
-		res.status(200).json(result);
+		res.status(HttpStatus.OK).json(result);
 	};
 
 	getById = (
@@ -34,11 +35,11 @@ export class BookingController {
 		const booking = this.bookingService.findById(req.params.id);
 
 		if (!booking) {
-			res.status(404).json({ error: "Booking not found" });
+			res.status(HttpStatus.NOT_FOUND).json({ error: "Booking not found" });
 			return;
 		}
 
-		res.status(200).json(booking);
+		res.status(HttpStatus.OK).json(booking);
 	};
 
 	create = (
@@ -48,7 +49,7 @@ export class BookingController {
 	): void => {
 		try {
 			const booking = this.bookingService.create(req.body);
-			res.status(201).json(booking);
+			res.status(HttpStatus.CREATED).json(booking);
 		} catch (error: unknown) {
 			next(error);
 		}
@@ -63,11 +64,11 @@ export class BookingController {
 			const booking = this.bookingService.update(req.params.id, req.body);
 
 			if (!booking) {
-				res.status(404).json({ error: "Booking not found" });
+				res.status(HttpStatus.NOT_FOUND).json({ error: "Booking not found" });
 				return;
 			}
 
-			res.status(200).json(booking);
+			res.status(HttpStatus.OK).json(booking);
 		} catch (error: unknown) {
 			next(error);
 		}
@@ -81,14 +82,14 @@ export class BookingController {
 		const booking = this.bookingService.findById(req.params.id);
 
 		if (!booking) {
-			res.status(404).json({ error: "Booking not found" });
+			res.status(HttpStatus.NOT_FOUND).json({ error: "Booking not found" });
 			return;
 		}
 
 		const updatedBooking = this.bookingService.update(req.params.id, {
 			active: !booking.active,
 		});
-		res.status(200).json(updatedBooking);
+		res.status(HttpStatus.OK).json(updatedBooking);
 	};
 
 	delete = (
@@ -99,10 +100,10 @@ export class BookingController {
 		const booking = this.bookingService.delete(req.params.id);
 
 		if (!booking) {
-			res.status(404).json({ error: "Booking not found" });
+			res.status(HttpStatus.NOT_FOUND).json({ error: "Booking not found" });
 			return;
 		}
 
-		res.status(204).send();
+		res.status(HttpStatus.NO_CONTENT).send();
 	};
 }

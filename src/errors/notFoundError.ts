@@ -1,7 +1,8 @@
+import { HttpStatus } from "../constants/httpStatus";
 import { AppError } from "../utils/appError";
 
 export class NotFoundError extends AppError {
 	constructor(message = "Not Found") {
-		super(message, 404);
+		super(message, HttpStatus.NOT_FOUND);
 	}
 }

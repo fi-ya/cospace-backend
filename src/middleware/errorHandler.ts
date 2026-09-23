@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
+import { HttpStatus } from "../constants/httpStatus";
 import { AppError } from "../utils/appError";
 
 export function errorHandler(
@@ -26,11 +27,11 @@ export function errorHandler(
 			message: issue.message,
 		}));
 
-		res.status(400).json({ error: "Validation failed", fieldErrors });
+		res.status(HttpStatus.BAD_REQUEST).json({ error: "Validation failed", fieldErrors });
 		return;
 	}
 
 	// Anything reaching here is unexpected and not operational: log internally, never expose it
 	console.error(err instanceof Error ? err.stack : err);
-	res.status(500).json({ error: "Something went wrong on our end" });
+	res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: "Something went wrong on our end" });
 }

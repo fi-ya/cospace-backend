@@ -338,10 +338,42 @@ Verified live: temporarily threw a plain `Error` containing a fake `postgres://u
 TypeScript validation passed. `git diff --check` reported pre-existing trailing-whitespace warnings only in `error-handling-notes.md` (your notes file, not something I edited) — unrelated to this change.
 
 ## 4. Raw Numeric Magic Numbers
+AI frequently uses unmapped numbers like 404 or 401 directly in code, which makes auditing status behaviours difficult as the application grows.
 
+Replaced every raw status number across the codebase with this enum:
+
+The errorHandler's AppError branch (res.status(err.statusCode)) intentionally stays dynamic, since err.statusCode already originates from an HttpStatus value set at construction time via the subclasses.
+
+Verified live: NotFoundError (enum-driven) and the controller's manual 404 check both still return correctly.
+
+## `enum`
+An `enum` (enumeration) is a TypeScript construct that gives a set of related named constants a shared type. Using your own `httpStatus.ts`:
+
+```ts
+export enum HttpStatus {
+	OK = 200,
+	CREATED = 201,
+	NOT_FOUND = 404,
+}
+```
+
+This creates:
+
+- **Named values**: `HttpStatus.OK` instead of the bare number `200`.
+- **A type**: `HttpStatus` can be used as a type annotation, so a function expecting `HttpStatus` will reject `res.status(999)` or any number that isn't one of the defined members (well — technically numeric enums still allow any `number` to be assigned due to how TS handles reverse mapping, but the *named* usage is what enforces intent in practice).
+- **Reverse lookup** (for numeric enums specifically): at runtime, `HttpStatus[200]` returns `"OK"`, because TypeScript compiles a numeric enum into an object with mappings in both directions.
+
+At compile time, `HttpStatus.NOT_FOUND` and `404` are interchangeable — the enum is really just documentation-with-teeth for a plain number. But writing `HttpStatus.NOT_FOUND` instead of `404` everywhere means:
+
+- The meaning is self-evident at the call site.
+- If you ever need to find every place a `404` is used, you search for `NOT_FOUND` instead of the ambiguous number `404` (which could appear in unrelated contexts — a port number, an array length, etc.).
+- Renaming or auditing status codes only requires touching one file (`httpStatus.ts`), not every scattered literal.
+
+There's also `const enum` (compiled away entirely, inlined at usage sites) and string enums (`Status = "ACTIVE"`), but the plain numeric `enum` you wrote is the most common form for this kind of fixed lookup table.
 
 
 ## 5. Swallowing Express Errors
+AI-generated error catchers often override standard Express routing errors (like sending bad JSON syntax), leading to server crash loops.
 
 ---
 

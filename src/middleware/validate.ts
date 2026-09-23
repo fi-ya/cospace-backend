@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodSchema } from "zod";
+import { HttpStatus } from "../constants/httpStatus";
 
 export function validate(requiredFields: string[]) {
 	return (req: Request, res: Response, next: NextFunction): void => {
@@ -8,7 +9,7 @@ export function validate(requiredFields: string[]) {
 		);
 
 		if (missingFields.length > 0) {
-			res.status(400).json({ error: "Missing required fields", missingFields });
+			res.status(HttpStatus.BAD_REQUEST).json({ error: "Missing required fields", missingFields });
 			return;
 		}
 
