@@ -26,6 +26,11 @@ app.get("/boom-app-error", () => {
 	throw new NotFoundError("Test resource not found");
 });
 
+// Temporary: trigger a plain, unexpected error to verify sanitized 500 response
+app.get("/boom-unexpected", () => {
+	throw new Error("db connection string: postgres://user:pass@internal-host/db");
+});
+
 app.use(errorHandler);
 
 const server = app.listen(port, () => {

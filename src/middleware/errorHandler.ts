@@ -30,6 +30,7 @@ export function errorHandler(
 		return;
 	}
 
+	// Anything reaching here is unexpected and not operational: log internally, never expose it
 	console.error(err instanceof Error ? err.stack : err);
-	res.status(500).json({ error: "Internal Server Error" });
+	res.status(500).json({ error: "Something went wrong on our end" });
 }

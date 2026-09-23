@@ -152,11 +152,7 @@ if (err instanceof AppError) {
 
 The handler never needs to know about `BadRequestError` or `NotFoundError` specifically — it only relies on the shared `AppError` contract (`statusCode`, `status`, `message`). The subclasses exist purely to make the *throwing* code expressive and correct by construction, while the *handling* code stays generic and doesn't grow a new branch every time a new semantic error type is added.
 
-### 3. Centralised Handler Update: Master the logic needed to separate trusted system exceptions from unexpected code failures.
-
-Read , lines 1 to 30
-
-Read , lines 1 to 30
+### 3. Centralised Handler Update: Master the logic needed to separate trusted system exceptions from unexpected code failures. 
 
 Noted — you've kept the `/boom-app-error` test route in `index.ts`; I won't remove it again since that was a deliberate undo on your part.
 
@@ -214,7 +210,10 @@ The property is set on every `AppError` (`this.isOperational = true`), but the c
 
 ## The Mastery (Manual Feedback & Correction Loop) - 50min
 
-## 1. Broken Prototype Chains -> it's an ES5-target issue
+## 1. Broken Prototype Chains -> it's an ES5-target issue 
+
+In TypeScript, when extending native classes like Error whilst compiling down to ES5 or ES6, the compiler sometimes breaks the internal prototype link, meaning err instanceof AppError will evaluate to false at runtime.
+
 Updated `appError.ts`:
 
 ```ts
@@ -233,6 +232,61 @@ I placed this fix only in the base `AppError` constructor rather than duplicatin
 Verified with a live request through the existing `/boom-app-error` route (which throws `NotFoundError`, a subclass): `err instanceof AppError` still resolves to `true` in `errorHandler.ts`, returning the correct `404` with the proper shape. TypeScript validation passed.
 
 One note: this project's `tsconfig.json` targets `es2022`, where this specific prototype-breaking bug doesn't actually occur (it's an ES5-target issue) — but the fix is a correct, harmless safeguard regardless, and worth keeping in case the target ever changes.
+
+## 2. Missing Catch Triggers - updated
+
+AI often leaves raw try-catch blocks inside controllers that do not forward the caught exception. If an error is caught and not passed to next(err), the server ignores the error handler and leaves the user waiting for a response.
+
+Now applying all changes: add `NextFunction` to every method, forward caught errors via `next(error)` instead of responding directly, and remove the now-unused `getErrorMessage` helper.   
+
+Now updating the routes so `next` is actually forwarded to each controller method:    
+
+Let's verify this actually works end-to-end — trigger the `create` catch block via the desk-length business rule and confirm the error now reaches the global handler rather than a direct `400`:     
+
+Ran terminal command:  npm run dev
+
+Ran terminal command:  curl -sS -i -X POST http://localhost:5000/bookings \
+  -H 'Authorization: super-secret-key' \
+  -H 'Content-Type: application/json' \
+  -d '{"desk":"AB","floor":"Floor 1","date":"2026-09-25","active":true}'
+
+To properly test the controller's `catch → next(error)` path (not just the Zod middleware, which currently intercepts the same rule first), I'll temporarily relax the Zod schema so the request reaches the service's own check, confirm the forwarding works, then revert the schema. 
+
+Ran terminal command:  curl -sS -i -X POST http://localhost:5000/bookings \
+  -H 'Authorization: super-secret-key' \
+  -H 'Content-Type: application/json' \
+  -d '{"desk":"AB","floor":"Floor 1","date":"2026-09-25","active":true}'
+
+Confirmed: the error successfully reached the global `errorHandler` (previously this would have been a direct `res.status(400)` response from inside the controller). It falls into the generic `500` branch because `BookingService.create` still throws a plain `Error`, not an `AppError` subclass — that's expected and outside the scope of this specific fix (which was only about forwarding, not about upgrading the service to throw `BadRequestError`). Reverting the schema now. 
+
+The terminal log itself confirms the fix: `console.error(err.stack)` in `errorHandler` printed the full stack originating from `BookingService.create`, proving the caught exception genuinely traveled through `next(error)` and was handled centrally — not swallowed by a direct response in the controller.
+
+Updated all five methods in `booking.controller.ts` to accept `next: NextFunction`:
+
+```ts
+create = (req, res, next: NextFunction): void => {
+	try {
+		const booking = this.bookingService.create(req.body);
+		res.status(201).json(booking);
+	} catch (error: unknown) {
+		next(error);
+	}
+};
+```
+
+- `create` and `update` (the only methods with `try/catch`) now call `next(error)` instead of `res.status(400).json(...)` — the caught exception is forwarded to `errorHandler`, not resolved locally.
+- `getAll`, `getById`, `patch`, `delete` all gained `next: NextFunction` in their signature too (as `_next`, since they don't currently throw), satisfying "every controller method has `next` defined."
+- Removed the now-unused private `getErrorMessage` helper, since response formatting for caught errors is no longer the controller's job.
+
+Updated `booking.routes.ts` so every wrapper actually forwards `next`:
+
+```ts
+router.post("/", auth, validateSchema(createBookingSchema), (req, res, next) =>
+	bookingController.create(req, res, next),
+);
+```
+
+Without this, `next` would never reach the controller even with the parameter declared. TypeScript validation and `git diff --check` both passed.
 
 -- 
 
@@ -266,13 +320,26 @@ So an equally valid (arguably simpler) fix here would have been to **remove the 
 
 **The part that was not strictly required**: adding `next: NextFunction` to `getAll`, `getById`, `patch`, and `delete` — none of them throw or catch anything, so nothing currently depends on that parameter being present. It's there purely as a defensive convention (so if error-throwing logic is added to those methods later, `next` is already available), not because the global error handler needs it.
 
-## 2. Missing Catch Triggers
+## 3. Leaking Raw System Secrets - updated
+AI-generated 500 error handlers often return the raw exception object (err) directly to the client, leaking server file directories, database connection strings, and library names.
 
+Updated the generic fallback branch in errorHandler.ts:
 
+```ts
+// Anything reaching here is unexpected and not operational: log internally, never expose it
+console.error(err instanceof Error ? err.stack : err);
+res.status(500).json({ error: "Something went wrong on our end" });
+```
 
-## 3. Leaking Raw System Secrets
+This branch is only reached for errors that are neither `AppError` nor `ZodError` — i.e., truly unexpected, non-operational failures (since every `AppError` always sets `isOperational = true` in its constructor, `instanceof AppError` is already equivalent to checking `isOperational`).
+
+Verified live: temporarily threw a plain `Error` containing a fake `postgres://user:pass@internal-host/db` connection string. The client response was exactly `{"error":"Something went wrong on our end"}` — no trace of the connection string, file paths, or stack trace reached the caller. Cleaned up the temporary test route afterward.
+
+TypeScript validation passed. `git diff --check` reported pre-existing trailing-whitespace warnings only in `error-handling-notes.md` (your notes file, not something I edited) — unrelated to this change.
 
 ## 4. Raw Numeric Magic Numbers
+
+
 
 ## 5. Swallowing Express Errors
 
