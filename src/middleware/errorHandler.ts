@@ -10,6 +10,12 @@ export function errorHandler(
 	_next: NextFunction,
 ): void {
 
+	// Handle malformed JSON bodies thrown by express.json() before anything else
+	if (err instanceof SyntaxError && "body" in err) {
+		res.status(HttpStatus.BAD_REQUEST).json({ error: "Malformed JSON in request body" });
+		return;
+	}
+
 	// Handle known AppError instances first
 	if (err instanceof AppError) {
 		res.status(err.statusCode).json({

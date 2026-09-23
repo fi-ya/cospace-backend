@@ -375,6 +375,31 @@ There's also `const enum` (compiled away entirely, inlined at usage sites) and s
 ## 5. Swallowing Express Errors
 AI-generated error catchers often override standard Express routing errors (like sending bad JSON syntax), leading to server crash loops.
 
+Ran terminal command:  curl -sS -i -X POST http://localhost:5000/bookings \
+  -H 'Authorization: super-secret-key' \
+  -H 'Content-Type: application/json' \
+  -d '{"desk": "Desk-05", "floor": '
+
+Confirmed: broken JSON now returns a clean `400` with `{"error":"Malformed JSON in request body"}`, and the server stayed up (no crash, no crash loop). Confirming the server is still responsive afterward, then stopping it.      
+
+Ran terminal command:  curl -sS http://localhost:5000/
+
+Server is healthy and responsive after the malformed request — no crash. Stopping it now.      
+
+Added a new first-checked branch to `errorHandler.ts`:
+
+```ts
+// Handle malformed JSON bodies thrown by express.json() before anything else
+if (err instanceof SyntaxError && "body" in err) {
+	res.status(HttpStatus.BAD_REQUEST).json({ error: "Malformed JSON in request body" });
+	return;
+}
+```
+
+**Why this specific check**: `express.json()` (built on `body-parser`) throws a native `SyntaxError` when it can't parse the request body — but it tags that error with an extra non-standard `body` property, which is the officially documented way (per Express's own error-handling guide) to distinguish "this is a JSON parsing failure" from any other unrelated `SyntaxError` that might occur elsewhere in the app. Without this check, that error would previously fall through to the generic `console.error` + `500` block, which — while not literally crashing the process — masked a client-caused `400` as a server-caused `500`.
+
+Verified live: sending deliberately broken JSON (`{"desk": "Desk-05", "floor": `) returned a clean `400` with `{"error":"Malformed JSON in request body"}`, and a follow-up request confirmed the server stayed healthy afterward, with no crash. TypeScript validation passed.
+
 ---
 
 ## Showcase & Technical Demo - 20min
