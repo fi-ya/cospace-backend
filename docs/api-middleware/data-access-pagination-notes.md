@@ -95,6 +95,55 @@ Keeping `count()` as its own method (rather than baking a total into `findPagina
 
 ### 2. Service Logic Integration: Understand how to aggregate raw data arrays and calculate mathematical metadata counts inside our business layer.
 
+- Converts page to skip ((page - 1) * limit), then delegates the slicing to `bookingRepository.findPaginated`.
+- Uses `count()` to compute totalPages via `Math.ceil`.
+- Returned shape (data + meta with totalItems, itemsPerPage, currentPage, totalPages) matches the pagination convention documented in the project's copilot-instructions.
+
+Using `getPaginatedShifts` in `booking.service.ts` as the concrete example:
+
+```ts
+getPaginatedShifts(page: number, limit: number) {
+	const totalItems = this.bookingRepository.count();
+	const skip = (page - 1) * limit;
+	const data = this.bookingRepository.findPaginated(skip, limit);
+	const totalPages = Math.ceil(totalItems / limit);
+
+	return {
+		data,
+		meta: { totalItems, itemsPerPage: limit, currentPage: page, totalPages },
+	};
+}
+```
+
+**Aggregating the raw data**
+
+`this.bookingRepository.findPaginated(skip, limit)` fetches only the *slice* of bookings relevant to this page — the repository doesn't know anything about pages, totals, or metadata, it only knows how to slice an array. The service is the layer that decides what page means and translates it into the repository's primitive `skip`/`limit` interface:
+
+```ts
+const skip = (page - 1) * limit;
+```
+
+This is a pure calculation with no side effects: `page` is a business-facing concept (`"give me page 2"`), `skip` is a storage-facing concept (`"give me items starting at index 10"`). The service is where that translation lives, because neither the repository (too low-level) nor the controller (too HTTP-focused) is the right place for it.
+
+**Calculating metadata separately from fetching data**
+
+```ts
+const totalItems = this.bookingRepository.count();
+```
+
+Notice this is a completely separate call from `findPaginated`. The array slice returned by `findPaginated` only ever contains up to `limit` items — there's no way to derive "how many bookings exist in total" from a 10-item slice alone. That's why `count()` exists as its own repository method: it queries the *entire* dataset's size, independent of whatever page is being requested.
+
+**The math that turns raw counts into metadata**
+
+```ts
+const totalPages = Math.ceil(totalItems / limit);
+```
+
+This is the core aggregation step: dividing the total item count by the page size gives a fractional number of pages (e.g. `23 / 10 = 2.3`), and `Math.ceil` rounds that up to `3`, because a partial page still counts as a full page from the client's perspective. Using `Math.floor` here would be wrong — it would silently drop the last, partially-filled page from the reported total.
+
+**Why this belongs in the business layer, not the controller**
+
+The controller's job is to read HTTP query parameters and format an HTTP response; it shouldn't contain pagination arithmetic. The repository's job is to store and retrieve bookings; it shouldn't know what "total pages" means as a concept. The service sits in between specifically because pagination metadata (`totalItems`, `totalPages`) is a *business rule about the shape of a paginated response*, not a storage detail and not an HTTP detail — it's the layer responsible for combining two independent repository queries (`count()` and `findPaginated()`) into one coherent, structured result the controller can serialize as-is.
 
 ### 3. Controller Payload Handling: Master the extraction and conversion of URL query parameters from strings into runtime integers.
 
