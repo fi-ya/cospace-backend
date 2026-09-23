@@ -7,10 +7,15 @@ export class BookingController {
 		private readonly bookingService: BookingService = new BookingService(),
 	) {}
 
+	private parseIntWithDefault(value: unknown, defaultValue: number): number {
+		const parsed = parseInt(String(value), 10);
+		return Number.isNaN(parsed) ? defaultValue : parsed;
+	}
+
 	getAll = (req: Request, res: Response): void => {
-		const page = Number(req.query.page) || 1;
+		const page = this.parseIntWithDefault(req.query.page, 1);
 		// default page size (10) and max (50), per project conventions
-		const limit = Math.min(Number(req.query.limit) || 10, 50);
+		const limit = Math.min(this.parseIntWithDefault(req.query.limit, 10), 50);
 
 		const result = this.bookingService.getPaginatedShifts(page, limit);
 		res.status(200).json(result);

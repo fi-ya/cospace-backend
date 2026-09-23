@@ -204,9 +204,36 @@ This chains two operations: first the same string→number conversion with a `10
 ---
 
 ## Step 3: MASTERY -> Parsing queries safely, preventing negative boundary errors, and calculating pages
+They often trust client-provided queries blindly, leading to NaN (Not-a-Number) runtime crashes, allow negative page numbers that break array slicing, or fail to enforce maximum limit restrictions, leaving the server vulnerable to bulk extraction requests.
 
-### 1. Unsafe Number Conversions;
+### 1. Unsafe Number Conversions; - fix applied
+
+Ran terminal command:  curl -sS 'http://localhost:5000/bookings?page=abc&limit=xyz'
+Ran terminal command:  curl -sS 'http://localhost:5000/bookings?page=2&limit=1'
+Both confirmed: `?page=abc&limit=xyz` safely falls back to `currentPage: 1, itemsPerPage: 10` instead of crashing; valid `?page=2&limit=1` still works correctly. Stopping the temporary server.    
+
+Updated `booking.controller.ts` with a reusable validation utility:
+
+```ts
+private parseIntWithDefault(value: unknown, defaultValue: number): number {
+	const parsed = parseInt(String(value), 10);
+	return Number.isNaN(parsed) ? defaultValue : parsed;
+}
+
+getAll = (req: Request, res: Response): void => {
+	const page = this.parseIntWithDefault(req.query.page, 1);
+	const limit = Math.min(this.parseIntWithDefault(req.query.limit, 10), 50);
+	...
+};
+```
+
+- `parseInt(String(value), 10)` uses base-10 radix explicitly, avoiding octal/hex ambiguity for strings like `"010"`.
+- `Number.isNaN(parsed)` explicitly checks for parse failure and returns the caller-provided default (`1` for page, `10` for limit) — clearer intent than relying on `||`'s falsy coercion (which also happens to treat `0` as "missing," a subtle gotcha the explicit check avoids).
+- Verified live: `?page=abc&limit=xyz` safely falls back to `currentPage: 1, itemsPerPage: 10` instead of producing `NaN` anywhere in the pipeline; valid numeric params still behave correctly.
+
 ### 2. Missing Bounds Constraints:
+
+
 ### 3. Bulk Extraction Vulnerability
 ### 4. Broken Meta Calculations
 ### 5. Complete CRUD Errors
