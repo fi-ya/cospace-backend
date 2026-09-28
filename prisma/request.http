@@ -4,7 +4,10 @@
 GET http://localhost:5000/bookings
 
 ### get one booking
-GET http://localhost:5000/bookings/102
+GET http://localhost:5000/bookings/1
+
+### get one booking paginated
+GET http://localhost:5000/bookings?page=1&limit=1
 
 ### throw application error
 GET  http://localhost:5000/boom-app-error
@@ -54,5 +57,16 @@ Authorization: Bearer <token-from-login-response>
 {
   "desk_id": 1,
   "booking_date": "2026-09-29",
+  "active": true
+}
+
+### create booking
+POST http://localhost:5000/bookings
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsImVtYWlsIjoiam9obi5kb2VAZXhhbXBsZS5jb20iLCJpYXQiOjE3OTA2MTY0MjIsImV4cCI6MTc5MDYyMDAyMn0.a_5AM2WYJ5nlNeqrvlkkyQecgr0LBZ0ljZ1xl4QSYL0
+
+{
+  "desk_id": 2,
+  "booking_date": "2026-11-29",
   "active": true
 }
