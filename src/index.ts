@@ -2,6 +2,8 @@ import express, { Request, Response } from "express";
 import bookingRouter from "./routes/booking.routes";
 import { logger } from "./middleware/logger";
 import { errorHandler } from "./middleware/errorHandler";
+import { NotFoundError } from "./errors/notFoundError";
+import { HttpStatus } from "./constants/httpStatus";
 
 const app = express();
 const port = 5000;
@@ -12,13 +14,23 @@ app.use(logger);
 
 // Define the root route for the API
 app.get("/", (req: Request, res: Response) => {
-	res.status(200).json({
+	res.status(HttpStatus.OK).json({
 		status: "active",
 		message: "CoSpace API is running",
 	});
 });
 
 app.use("/bookings", bookingRouter);
+
+// Route to trigger a test NotFoundError
+app.get("/boom-app-error", () => {
+	throw new NotFoundError("Test resource not found");
+});
+
+// Temporary: trigger a plain, unexpected error to verify sanitized 500 response
+app.get("/boom-unexpected", () => {
+	throw new Error("db connection string: postgres://user:pass@internal-host/db");
+});
 
 app.use(errorHandler);
 
