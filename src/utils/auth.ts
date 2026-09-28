@@ -47,10 +47,15 @@ export function generateToken(user: Pick<User, "id" | "email">): string {
 
 // Verify a JWT token and extract its payload
 export function verifyToken(token: string): AuthTokenPayload {
+    // Verify the JWT token and extract its payload.
 	const payload = jwt.verify(token, jwtSecret);
+
+    // Ensure the payload is an object and contains the expected properties.
 	if (typeof payload !== "object" || payload === null) {
 		throw new JsonWebTokenError("Invalid token payload");
 	}
+
+    // Destructure the userId and email from the payload and validate their types.
 	const { userId, email } = payload;
 	if (typeof userId !== "number" || typeof email !== "string") {
 		throw new JsonWebTokenError("Invalid token payload");

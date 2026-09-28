@@ -32,7 +32,11 @@ I chose 12 bcrypt salt rounds and a one-hour token expiry; adjust these if the w
 - generateToken(user) and verifyToken(token) using jsonwebtoken.
 - Required JWT_SECRET with no fallback. Tokens contain only userId and email, and expire after one hour.
 
-# 4. Implement Registration and Login
+# 4. Add Express middleware for authentication
+
+The `requireAuth` middleware checks for a Bearer token in the `Authorization` header, verifies it using `verifyToken`, and attaches the decoded user payload to `req.user`. If the token is missing or invalid, it calls `next` with an `UnauthorizedError`.
+
+# 5. Implement Registration and Login
 registration, login, and authentication middleware
 
 
