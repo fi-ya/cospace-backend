@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import bookingRouter from "./routes/booking.routes";
+import authRouter from "./routes/auth.routes";
 import { logger } from "./middleware/logger";
 import { errorHandler } from "./middleware/errorHandler";
 import { NotFoundError } from "./errors/notFoundError";
@@ -20,7 +21,10 @@ app.get("/", (req: Request, res: Response) => {
 	});
 });
 
+// Register booking routes
 app.use("/bookings", bookingRouter);
+// Register authentication routes
+app.use("/auth", authRouter);
 
 // Route to trigger a test NotFoundError
 app.get("/boom-app-error", () => {
