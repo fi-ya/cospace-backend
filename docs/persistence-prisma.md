@@ -26,7 +26,7 @@ The initializer creates `prisma/schema.prisma`, `prisma.config.ts`, and `.env`. 
 Keep credentials in `.env`, which must be ignored by Git. Commit only a matching `.env.example` with placeholders. Add this to `.env` and replace the username and password with the MySQL account created for this project:
 
 ```dotenv
-DATABASE_URL="mysql://USER:PASSWORD@localhost:3306/cospace"
+DATABASE_URL="mysql://USER:PASSWORD@localhost:3306/cospace-dev"
 ```
 
 URL-encode special characters in the username or password. The database must already exist. The repo's [README setup](../README.md) describes creating `cospace` and applying the SQL migrations. The application should fail at startup if `DATABASE_URL` is missing; do not add a fallback credential.
@@ -76,6 +76,7 @@ model User {
 	first_name String    @db.VarChar(100)
 	last_name  String    @db.VarChar(100)
 	email      String    @unique @db.VarChar(191)
+	password   String    @db.VarChar(255)
 	team_id    Int?
 	team       Team?     @relation(fields: [team_id], references: [id], onDelete: SetNull)
 	bookings   Booking[]
@@ -130,19 +131,6 @@ npx prisma generate
 ```
 
 Choose exactly one of the following paths for the current database state.
-
-### Existing database created by the SQL migrations
-
-Do not run `migrate dev` directly against this database. Prisma has no migration history for the existing SQL files, so first create and mark a baseline migration as already applied:
-
-```sh
-mkdir -p prisma/migrations/0_init
-npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script > prisma/migrations/0_init/migration.sql
-npx prisma migrate resolve --applied 0_init
-npx prisma migrate status
-```
-
-Before marking the baseline applied, confirm that the Prisma schema represents the actual database. `migrate resolve` records the baseline; it does not execute the generated SQL against the existing tables. After baselining, use Prisma migrations for future schema changes instead of applying new SQL changes outside Prisma.
 
 ### Empty database
 
@@ -208,3 +196,20 @@ After wiring the repository, verify `GET /bookings` and pagination against seede
 - [Desk/date unique constraint migration](../migrations/002_add_indexing.up.sql)
 - [Prisma MySQL documentation](https://www.prisma.io/docs/orm/v7/core-concepts/supported-databases/mysql)
 - [Prisma baselining documentation](https://www.prisma.io/docs/orm/v7/prisma-migrate/workflows/baselining)
+
+
+
+--- 
+
+### Existing database created by the SQL migrations
+
+Do not run `migrate dev` directly against this database. Prisma has no migration history for the existing SQL files, so first create and mark a baseline migration as already applied:
+
+```sh
+mkdir -p prisma/migrations/0_init
+npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script > prisma/migrations/0_init/migration.sql
+npx prisma migrate resolve --applied 0_init
+npx prisma migrate status
+```
+
+Before marking the baseline applied, confirm that the Prisma schema represents the actual database. `migrate resolve` records the baseline; it does not execute the generated SQL against the existing tables. After baselining, use Prisma migrations for future schema changes instead of applying new SQL changes outside Prisma.

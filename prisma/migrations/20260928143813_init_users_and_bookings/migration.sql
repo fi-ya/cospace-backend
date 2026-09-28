@@ -14,6 +14,7 @@ CREATE TABLE `users` (
     `first_name` VARCHAR(100) NOT NULL,
     `last_name` VARCHAR(100) NOT NULL,
     `email` VARCHAR(191) NOT NULL,
+    `password` VARCHAR(255) NOT NULL,
     `team_id` INTEGER NULL,
 
     UNIQUE INDEX `users_email_key`(`email`),
@@ -62,4 +63,3 @@ ALTER TABLE `bookings` ADD CONSTRAINT `bookings_user_id_fkey` FOREIGN KEY (`user
 
 -- AddForeignKey
 ALTER TABLE `bookings` ADD CONSTRAINT `bookings_desk_id_fkey` FOREIGN KEY (`desk_id`) REFERENCES `desks`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-

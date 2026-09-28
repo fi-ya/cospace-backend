@@ -1,0 +1,26 @@
+
+GET http://localhost:5000/bookings
+
+###
+GET  http://localhost:5000/boom-app-error
+
+###
+GET  http://localhost:5000/boom-unexpected
+
+###
+POST http://localhost:5000/bookings \
+-H "Content-Type: application/json" \
+-d '{"name": "Desk 102"}'
+
+###
+PUT http://localhost:5000/bookings/102 \
+-H "Content-Type: application/json" \
+-d '{"name": "Desk 102", "booked": "false"}
+
+###
+PATCH http://localhost:5000/bookings/102 \
+-H "Content-Type: application/json" \
+-d '{"booked": "false"}'
+
+###
+DELETE http://localhost:5000/bookings/102
