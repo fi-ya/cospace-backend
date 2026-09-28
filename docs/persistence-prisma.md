@@ -149,7 +149,8 @@ Before marking the baseline applied, confirm that the Prisma schema represents t
 If `cospace` exists but has no tables, create the first migration from the Prisma schema and apply it:
 
 ```sh
-npx prisma migrate dev --name init
+npx prisma migrate dev --name init_users_and_bookings
+
 ```
 
 Do not also run `migrations/001_init_schema.up.sql` and `migrations/002_add_indexing.up.sql` against this database; that would try to create the same tables again. Keep the existing SQL files as historical material, and use Prisma migrations as the schema-change workflow going forward.
