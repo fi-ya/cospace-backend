@@ -55,6 +55,7 @@ Represents an employee. A User belongs to one Team via `team_id`.
 | `first_name` | string | colleague's first name |
 | `last_name` | string | colleague's last name |
 | `email` | string | unique, mandatory |
+| `password` | string | stored as a bcrypt hash, never plain text |
 | `team_id` | number | foreign key pointing to `teams.id`, nullable (`ON DELETE SET NULL` cascades) |
 
 ---
