@@ -7,7 +7,7 @@ import {
 	updateBookingSchema,
 } from "../schemas/booking.schema";
 import { BookingController } from "../controllers/booking.controller";
-import { auth } from "../middleware/auth";
+import { requireAuth } from "../middleware/requireAuth";
 import { validateSchema } from "../middleware/validate";
 
 const router = Router();
@@ -19,25 +19,25 @@ router.get("/:id", (req, res, next) =>
 );
 router.post(
 	"/",
-	auth,
+	requireAuth,
 	validateSchema(createBookingSchema),
 	(req: Request<Record<string, never>, Booking, CreateBookingInput>, res: Response, next: NextFunction) => bookingController.create(req, res, next),
 );
 router.put(
 	"/:id",
-	auth,
+	requireAuth,
 	validateSchema(updateBookingSchema),
 	(req: Request<{ id: string }, Booking, UpdateBookingInput>, res: Response, next: NextFunction) => bookingController.update(req, res, next),
 );
 router.patch(
 	"/:id",
-	auth,
+	requireAuth,
 	(req: Request<{ id: string }>, res: Response, next: NextFunction) =>
 		bookingController.patch(req, res, next),
 );
 router.delete(
 	"/:id",
-	auth,
+	requireAuth,
 	(req: Request<{ id: string }>, res: Response, next: NextFunction) =>
 		bookingController.delete(req, res, next),
 );

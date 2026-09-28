@@ -43,8 +43,8 @@ export class BookingService {
 		};
 	}
 
-	create(booking: CreateBookingInput): Promise<Booking> {
-		return this.bookingRepository.create(booking);
+	create(booking: CreateBookingInput, userId: number): Promise<Booking> {
+		return this.bookingRepository.create(booking, userId);
 	}
 
 	update(id: number, data: UpdateBookingInput): Promise<Booking | undefined> {

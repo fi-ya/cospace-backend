@@ -49,11 +49,11 @@ export class BookingRepository {
 		return prisma.booking.count();
 	}
 
-	async create(data: CreateBookingInput): Promise<Booking> {
+	async create(data: CreateBookingInput, userId: number): Promise<Booking> {
 		const booking = await prisma.booking.create({
 			data: {
-				user_id: data.user_id,
-				desk_id: data.desk_id,
+				user: { connect: { id: userId } },
+				desk: { connect: { id: data.desk_id } },
 				booking_date: new Date(`${data.booking_date}T00:00:00.000Z`),
 				active: data.active,
 			},
@@ -66,7 +66,6 @@ export class BookingRepository {
 		data: UpdateBookingInput,
 	): Promise<Booking | undefined> {
 		const updateData: Prisma.BookingUncheckedUpdateInput = {
-			...(data.user_id !== undefined && { user_id: data.user_id }),
 			...(data.desk_id !== undefined && { desk_id: data.desk_id }),
 			...(data.booking_date !== undefined && {
 				booking_date: new Date(`${data.booking_date}T00:00:00.000Z`),
