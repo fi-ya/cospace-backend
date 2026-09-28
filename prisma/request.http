@@ -17,7 +17,7 @@ POST http://localhost:5000/bookings
 Content-Type: application/json
 Authorization: Bearer <token-from-login-response>
 
-{"name": "Desk 102", "booked": "true", "user_id": 2}
+{"desk_id": 1, "booking_date": "2026-09-29", "active": true}
 
 ### create booking
 PUT http://localhost:5000/bookings/102 HTTP/1.1
@@ -49,10 +49,9 @@ Content-Type: application/json
 ### create booking
 POST http://localhost:5000/bookings
 Content-Type: application/json
-Authorization: super-secret-key
+Authorization: Bearer <token-from-login-response>
 
 {
-  "user_id": 2,
   "desk_id": 1,
   "booking_date": "2026-09-29",
   "active": true

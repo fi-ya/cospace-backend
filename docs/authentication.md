@@ -40,7 +40,7 @@ Added requireAuth in requireAuth.ts. It accepts a Bearer token, verifies it, att
 
 Updated express.d.ts so req.user matches the verified JWT payload. TypeScript compilation, editor diagnostics, and git diff --check all pass.
 
-The middleware is not yet attached to any routes.
+The middleware is attached to booking write routes. Public booking reads remain unguarded.
 
 # 5. Register and Login Endpoints
 
@@ -103,8 +103,16 @@ npx tsc --noEmit
 ## Assumptions and Remaining Work
 
 - The workshop did not specify registration response shape, password policy, or JWT lifetime. This draft assumes registration returns `201` with the safe user profile, passwords are at least 8 characters and at most 72 UTF-8 bytes, and JWTs expire after one hour.
-- `requireAuth` is drafted, but existing booking routes still use the old fixed-token middleware. Replace it with `requireAuth` only on protected write routes in the route-wiring task; leave public reads public.
+- `requireAuth` protects booking write routes while booking reads remain public. Booking creation derives the owner from the verified `req.user.userId` claim rather than accepting `user_id` from the request body.
 - Automated auth/API tests are not included yet. Add tests for hash storage, successful and failed login, duplicate emails, invalid/expired JWTs, password-hash omission from responses, and invalid optional `team_id` values.
 - The fixed development `JWT_SECRET` must be replaced with a strong local secret in `.env`; never commit that file or use a fallback secret.
 
 Before committing on `feature/api-authentication`, run `npx tsc --noEmit` and the available auth/API tests.
+
+---
+
+# Mastery
+
+## Bind Bookings to the Authenticated User
+
+In `booking.controller.ts`, take `req.user.userId` from the verified JWT payload and pass it to the service and repository. In Prisma, connect the booking's actual `user` relation with `user: { connect: { id: userId } }`. Do not accept `user_id` from the request body as the booking owner; the `Booking` model has a `user` relation, not a `createdBy` relation.
