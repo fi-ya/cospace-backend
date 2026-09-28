@@ -25,7 +25,21 @@ Generate a random value locally; do not use the placeholder above as a real secr
 
 The application must fail to start if `JWT_SECRET` is missing. `prisma.config.ts` also loads `.env` for Prisma CLI commands; application code must load environment variables before reading the secret.
 
-## 3. Add the Password Column
+
+# 3. Add authentication utilities
+I chose 12 bcrypt salt rounds and a one-hour token expiry; adjust these if the workshop specifies different values. 
+- hashPassword(password) and comparePassword(password, hash) using bcrypt.
+- generateToken(user) and verifyToken(token) using jsonwebtoken.
+- Required JWT_SECRET with no fallback. Tokens contain only userId and email, and expire after one hour.
+
+# 4. Implement Registration and Login
+registration, login, and authentication middleware
+
+
+---
+extra 
+
+## Add the Password Column
 
 The `User` Prisma model now includes:
 
