@@ -26,7 +26,7 @@ model User {
 	first_name String    @db.VarChar(100)
 	last_name  String    @db.VarChar(100)
 	email      String    @unique @db.VarChar(191)
-	password   String?   @db.VarChar(255)
+	password   String    @db.VarChar(255)
 	team_id    Int?
 	team       Team?     @relation(fields: [team_id], references: [id], onDelete: SetNull)
 	bookings   Booking[]
