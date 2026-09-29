@@ -26,7 +26,7 @@ It will create a:
     - `npm install --save-dev prisma dotenv`
 
 ### 2. Configure dotenv in your project.
-Install dotenv to manage environment variables:
+Install dotenv to manage environment variables as to runtime dependencies as the Prismaclient will need access to them:
 ```bash
 npm install dotenv
 ```
@@ -210,8 +210,17 @@ First, install the MariaDB adapter for Prisma:
 npm install @prisma/adapter-mariadb@7.10.0
 ```
 
+Validate the Prisma schema and the adapter installation by running the following command:
+
+```bash
+npx prisma validate 
+```
+
+
+
 
 ```ts
+
 import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../generated/prisma/client";
