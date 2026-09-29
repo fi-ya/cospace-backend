@@ -13,6 +13,7 @@ export class AppError extends Error {
 		// re-link the prototype chain so `instanceof` resolves correctly for every subclass
 		Object.setPrototypeOf(this, new.target.prototype);
 
+		// capture the stack trace for this error instance
 		Error.captureStackTrace(this, this.constructor);
 	}
 }

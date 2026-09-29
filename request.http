@@ -9,11 +9,35 @@ GET http://localhost:5000/bookings/1
 ### get one booking paginated
 GET http://localhost:5000/bookings?page=2&limit=2
 
-### throw application error
+### throw forbidden error - 403
+GET http://localhost:5000/boom-forbidden
+
+### throw application error - 404
 GET  http://localhost:5000/boom-app-error
 
-### throw unexpected error
+### throw unexpected error - 500
 GET  http://localhost:5000/boom-unexpected
+
+### throw syntax error - 500
+GET  http://localhost:5000/boom-syntax-error
+
+### throw type error - 500
+GET  http://localhost:5000/boom-type-error
+
+### throw reference error - 500
+GET  http://localhost:5000/boom-reference-error
+
+### throw range error - 500
+GET  http://localhost:5000/boom-range-error
+
+### throw URI error - 500
+GET  http://localhost:5000/boom-uri-error
+
+### throw eval error - 500
+GET  http://localhost:5000/boom-eval-error
+
+### throw aggregate error - 500
+GET  http://localhost:5000/boom-aggregate-error
 
 ### create booking
 POST http://localhost:5000/bookings

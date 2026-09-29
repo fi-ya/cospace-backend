@@ -27,9 +27,54 @@ app.get("/boom-app-error", () => {
 	throw new NotFoundError("Test resource not found");
 });
 
+import { ForbiddenError } from "./errors/forbiddenError";
+
+app.get("/boom-forbidden", () => {
+    throw new ForbiddenError("You do not have permission to access this resource");
+});
+
 // Temporary: trigger a plain, unexpected error to verify sanitized 500 response
 app.get("/boom-unexpected", () => {
 	throw new Error("db connection string: postgres://user:pass@internal-host/db");
+});
+
+// Routes to demonstrate built-in JavaScript error types through the error handler
+app.get("/boom-syntax-error", () => {
+  // when code or text could not be parsed as valid syntax
+	throw new SyntaxError("Example syntax error");
+});
+
+app.get("/boom-type-error", () => {
+  // when a value is not of the expected type
+	throw new TypeError("Example type error");
+});
+
+app.get("/boom-reference-error", () => {
+  // when an invalid reference is encountered
+	throw new ReferenceError("Example reference error");
+});
+
+app.get("/boom-range-error", () => {
+  // when a value is not within the allowed range
+	throw new RangeError("Example range error");
+});
+
+app.get("/boom-uri-error", () => {
+  // when an invalid URI is encountered
+	throw new URIError("Example URI error");
+});
+
+app.get("/boom-eval-error", () => {
+  // when an error occurs during the evaluation of code
+	throw new EvalError("Example eval error");
+});
+
+app.get("/boom-aggregate-error", () => {
+  // when multiple errors need to be reported together
+	throw new AggregateError(
+		[new Error("First example error"), new Error("Second example error")],
+		"Example aggregate error",
+	);
 });
 
 app.use(errorHandler);
