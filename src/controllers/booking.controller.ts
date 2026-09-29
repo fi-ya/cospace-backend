@@ -1,7 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { HttpStatus } from "../constants/httpStatus";
+import { BadRequestError } from "../errors/badRequestError";
 import { NotFoundError } from "../errors/notFoundError";
-import { Booking } from "../schemas/booking.schema";
+import type { Booking as PrismaBooking } from "../generated/prisma/client";
+import { CreateBookingInput, UpdateBookingInput } from "../schemas/booking.schema";
 import { BookingService } from "../services/booking.service";
 
 export class BookingController {
@@ -14,7 +16,15 @@ export class BookingController {
 		return Number.isNaN(parsed) ? defaultValue : parsed;
 	}
 
-	getAll = (req: Request, res: Response, _next: NextFunction): void => {
+	private parseBookingId(value: string): number {
+		const id = Number(value);
+		if (!Number.isInteger(id) || id < 1) {
+			throw new BadRequestError("Booking id must be a positive integer");
+		}
+		return id;
+	}
+
+	getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
 		// ensure page is at least 1
 		const page = Math.max(this.parseIntWithDefault(req.query.page, 1), 1);
 
@@ -24,45 +34,23 @@ export class BookingController {
 			50,
 		);
 
-		const result = this.bookingService.getPaginatedShifts(page, limit);
-		res.status(HttpStatus.OK).json(result);
-	};
-
-	getById = (
-		req: Request<{ id: string }>,
-		res: Response,
-		next: NextFunction,
-	): void => {
-		const booking = this.bookingService.findById(req.params.id);
-
-		if (!booking) {
-			next(new NotFoundError("Booking not found"));
-			return;
-		}
-
-		res.status(HttpStatus.OK).json(booking);
-	};
-
-	create = (
-		req: Request<Record<string, never>, Booking, Booking>,
-		res: Response,
-		next: NextFunction,
-	): void => {
 		try {
-			const booking = this.bookingService.create(req.body);
-			res.status(HttpStatus.CREATED).json(booking);
+			const result = await this.bookingService.getPaginatedShifts(page, limit);
+			res.status(HttpStatus.OK).json(result);
 		} catch (error: unknown) {
 			next(error);
 		}
 	};
 
-	update = (
-		req: Request<{ id: string }, Booking, Partial<Booking>>,
+	getById = async (
+		req: Request<{ id: string }>,
 		res: Response,
 		next: NextFunction,
-	): void => {
+	): Promise<void> => {
 		try {
-			const booking = this.bookingService.update(req.params.id, req.body);
+			const booking = await this.bookingService.findById(
+				this.parseBookingId(req.params.id),
+			);
 
 			if (!booking) {
 				next(new NotFoundError("Booking not found"));
@@ -75,36 +63,82 @@ export class BookingController {
 		}
 	};
 
-	patch = (
-		req: Request<{ id: string }>,
+	create = async (
+		req: Request<Record<string, never>, PrismaBooking, CreateBookingInput>,
 		res: Response,
 		next: NextFunction,
-	): void => {
-		const booking = this.bookingService.findById(req.params.id);
-
-		if (!booking) {
-			next(new NotFoundError("Booking not found"));
-			return;
+	): Promise<void> => {
+		try {
+			const booking = await this.bookingService.create(req.body);
+			res.status(HttpStatus.CREATED).json(booking);
+		} catch (error: unknown) {
+			next(error);
 		}
-
-		const updatedBooking = this.bookingService.update(req.params.id, {
-			active: !booking.active,
-		});
-		res.status(HttpStatus.OK).json(updatedBooking);
 	};
 
-	delete = (
+	update = async (
+		req: Request<{ id: string }, PrismaBooking, UpdateBookingInput>,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
+		try {
+			const booking = await this.bookingService.update(
+				this.parseBookingId(req.params.id),
+				req.body,
+			);
+
+			if (!booking) {
+				next(new NotFoundError("Booking not found"));
+				return;
+			}
+
+			res.status(HttpStatus.OK).json(booking);
+		} catch (error: unknown) {
+			next(error);
+		}
+	};
+
+	patch = async (
 		req: Request<{ id: string }>,
 		res: Response,
 		next: NextFunction,
-	): void => {
-		const booking = this.bookingService.delete(req.params.id);
+	): Promise<void> => {
+		try {
+			const id = this.parseBookingId(req.params.id);
+			const booking = await this.bookingService.findById(id);
 
-		if (!booking) {
-			next(new NotFoundError("Booking not found"));
-			return;
+			if (!booking) {
+				next(new NotFoundError("Booking not found"));
+				return;
+			}
+
+			const updatedBooking = await this.bookingService.update(id, {
+				active: !booking.active,
+			});
+			res.status(HttpStatus.OK).json(updatedBooking);
+		} catch (error: unknown) {
+			next(error);
 		}
+	};
 
-		res.status(HttpStatus.NO_CONTENT).send();
+	delete = async (
+		req: Request<{ id: string }>,
+		res: Response,
+		next: NextFunction,
+	): Promise<void> => {
+		try {
+			const booking = await this.bookingService.delete(
+				this.parseBookingId(req.params.id),
+			);
+
+			if (!booking) {
+				next(new NotFoundError("Booking not found"));
+				return;
+			}
+
+			res.status(HttpStatus.NO_CONTENT).send();
+		} catch (error: unknown) {
+			next(error);
+		}
 	};
 }

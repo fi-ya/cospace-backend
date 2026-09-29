@@ -1,15 +1,13 @@
 import { z } from "zod";
 
 export const createBookingSchema = z.object({
-	desk: z.string().trim().min(3).max(100),
-	floor: z.string().trim().min(5).max(200),
-	date: z.string().date(),
+	user_id: z.number().int().positive(),
+	desk_id: z.number().int().positive(),
+	booking_date: z.string().date(),
 	active: z.boolean().default(true),
 });
 
-export const bookingSchema = createBookingSchema.extend({
-	id: z.string(),
-});
+export const updateBookingSchema = createBookingSchema.partial();
 
-export type CreateBookingInput = z.infer<typeof createBookingSchema>;
-export type Booking = z.infer<typeof bookingSchema>;
+export type CreateBookingInput = z.input<typeof createBookingSchema>;
+export type UpdateBookingInput = z.input<typeof updateBookingSchema>;

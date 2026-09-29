@@ -1,5 +1,11 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { Booking, createBookingSchema } from "../schemas/booking.schema";
+import type { Booking as PrismaBooking } from "../generated/prisma/client";
+import {
+	CreateBookingInput,
+	UpdateBookingInput,
+	createBookingSchema,
+	updateBookingSchema,
+} from "../schemas/booking.schema";
 import { BookingController } from "../controllers/booking.controller";
 import { auth } from "../middleware/auth";
 import { validateSchema } from "../middleware/validate";
@@ -16,7 +22,7 @@ router.post(
 	auth,
 	validateSchema(createBookingSchema),
 	(
-		req: Request<Record<string, never>, Booking, Booking>,
+		req: Request<Record<string, never>, PrismaBooking, CreateBookingInput>,
 		res: Response,
 		next: NextFunction,
 	) => bookingController.create(req, res, next),
@@ -24,8 +30,9 @@ router.post(
 router.put(
 	"/:id",
 	auth,
+	validateSchema(updateBookingSchema),
 	(
-		req: Request<{ id: string }, Booking, Booking>,
+		req: Request<{ id: string }, PrismaBooking, UpdateBookingInput>,
 		res: Response,
 		next: NextFunction,
 	) => bookingController.update(req, res, next),
