@@ -216,11 +216,10 @@ Validate the Prisma schema and the adapter installation by running the following
 npx prisma validate 
 ```
 
-
-
+### 7a. Configure the Prisma MariaDB adapter
+Before instantiating the Prisma Client, we need to configure the Prisma MariaDB adapter with the connection details. This adapter allows the Prisma Client to communicate with the MariaDB database correctly.
 
 ```ts
-
 import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "../generated/prisma/client";
