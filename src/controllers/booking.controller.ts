@@ -9,22 +9,30 @@ export class BookingController {
 		private readonly bookingService: BookingService = new BookingService(),
 	) {}
 
+	// Helper method to parse integers with a default value if parsing fails
 	private parseIntWithDefault(value: unknown, defaultValue: number): number {
+		// Convert the value to a string and attempt to parse it as an integer
 		const parsed = parseInt(String(value), 10);
+		
+		// If parsing fails, return the default value
 		return Number.isNaN(parsed) ? defaultValue : parsed;
 	}
 
+	// Get all bookings with pagination
 	getAll = (req: Request, res: Response, _next: NextFunction): void => {
-		// ensure page is at least 1
+		// Parse the page query parameter and ensure it is at least 1
 		const page = Math.max(this.parseIntWithDefault(req.query.page, 1), 1);
 
-		// ensure limit is at least 1 and at most 50 - default page size (10) and max (50), per project conventions
+		// Parse the limit query parameter, ensuring it is at least 1 and at most 50
 		const limit = Math.min(
 			Math.max(this.parseIntWithDefault(req.query.limit, 10), 1),
 			50,
 		);
 
+		// Retrieve the paginated list of bookings from the service
 		const result = this.bookingService.getPaginatedShifts(page, limit);
+
+		// Send the paginated list of bookings as the response
 		res.status(HttpStatus.OK).json(result);
 	};
 

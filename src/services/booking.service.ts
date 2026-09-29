@@ -13,6 +13,7 @@ export class BookingService {
 		return this.bookingRepository.findById(id);
 	}
 
+	// Get a paginated list of bookings with metadata about the pagination
 	getPaginatedShifts(page: number, limit: number): {
 		data: Booking[];
 		meta: {
@@ -22,11 +23,16 @@ export class BookingService {
 			totalPages: number;
 		};
 	} {
+		// Calculate the total number of bookings and the number of bookings to skip based on the current page and limit
 		const totalItems = this.bookingRepository.count();
+		// Determine how many bookings to skip based on the current page and limit
 		const skip = (page - 1) * limit;
+		// Retrieve the paginated list of bookings from the repository
 		const data = this.bookingRepository.findPaginated(skip, limit);
+		// Calculate the total number of pages based on the total items and the limit per page
 		const totalPages = Math.ceil(totalItems / limit);
 
+		// Return the paginated list of bookings along with the pagination metadata
 		return {
 			data,
 			meta: {

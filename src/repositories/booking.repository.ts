@@ -15,7 +15,9 @@ export class BookingRepository {
 		return this.bookings.find((booking) => booking.id === id);
 	}
 
+	// Get a paginated list of bookings based on the number of items to skip and the limit per page
 	findPaginated(skip: number, limit: number): Booking[] {
+		// Use the slice method to get the subset of bookings for the current page based on the skip and limit values
 		return this.bookings.slice(skip, skip + limit);
 	}
 
