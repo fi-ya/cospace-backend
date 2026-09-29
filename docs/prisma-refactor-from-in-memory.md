@@ -219,19 +219,28 @@ npx prisma validate
 ### 7a. Configure the Prisma MariaDB adapter
 Before instantiating the Prisma Client, we need to configure the Prisma MariaDB adapter with the connection details. This adapter allows the Prisma Client to communicate with the MariaDB database correctly.
 
+`src/utils/prisma.ts` creates the shared client using the MariaDB adapter. It fails during startup if `DATABASE_URL` is missing.
+
 ```ts
-import "dotenv/config";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import dotenv from "dotenv";
 import { PrismaClient } from "../generated/prisma/client";
 
+dotenv.config();
+
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is required");
+}
+
+const connection = new URL(databaseUrl);
 const adapter = new PrismaMariaDb({
-  host: "localhost",
-  port: 3306,
-  user: process.env.MYSQL_USER!,
-  password: process.env.MYSQL_PASSWORD!,
-  database: process.env.MYSQL_DATABASE!,
+  host: connection.hostname,
+  port: Number(connection.port || 3306),
+  user: decodeURIComponent(connection.username),
+  password: decodeURIComponent(connection.password),
+  database: decodeURIComponent(connection.pathname.slice(1)),
 });
 
 export const prisma = new PrismaClient({ adapter });
 ```
-

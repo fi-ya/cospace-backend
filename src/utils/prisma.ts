@@ -1,3 +1,6 @@
+// Prisma client configuration for MariaDB using environment variables
+// 
+
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import dotenv from "dotenv";
 import { PrismaClient } from "../generated/prisma/client";
