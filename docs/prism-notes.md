@@ -4,7 +4,10 @@ We will start by installing Prisma and setting up the initial project structure.
 
 ## Installing Prisma
 
-### 1. Install Prisma CLI and Prisma Client.
+### 1. Install Prisma CLI and Prisma Client
+
+prisma - The Prisma CLI for running commands like prisma init, prisma migrate, and prisma generate
+@prisma/client - The Prisma Client library for querying your database 
 ```bash 
 npm install -D prisma@7.10.0
 npm install @prisma/client@7.10.0 
@@ -15,18 +18,12 @@ This will initialize a new Prisma project with a MySQL datasource.
  npx prisma init --datasource-provider mysql
  ```
 It will create a:
-
-- `prisma/schema.prisma` - The main Prisma schema file where you define your data model and datasource.
 - `.env` - Environment file to store your database connection URL.
+- `prisma/schema.prisma` - The main Prisma schema file where you define your data model and datasource.
 - `prisma/migrations/` - Directory where migration files will be stored after running `prisma migrate dev`.
 - `src/generated/prisma/` - Directory where the generated Prisma client will be stored.
-- `prisma7.config.js` - Configuration file for Prisma 7, if applicable.
+- `prisma7.config.js` - Configuration file for Prisma 7, used to customize the behavior of the Prisma CLI and client. Allows you to run prisma commands in the terminal with specific configurations.
     - `npm install --save-dev prisma dotenv`
-
-
-prisma - The Prisma CLI for running commands like prisma init, prisma migrate, and prisma generate
-@prisma/client - The Prisma Client library for querying your database
-dotenv - Loads environment variables from your .env file
 
 ### 2. Configure dotenv in your project.
 Install dotenv to manage environment variables:
@@ -202,7 +199,31 @@ INSERT INTO desks (id, name, floor) VALUES
 (3, 'Desk-03', 2),
 (4, 'Desk-04', 2);
 ```
-### 7. Interact with the database
+### 7. Instantiate the Prisma Client
 
-You can now use the generated Prisma client to interact with your database. For example, you can create a new user or fetch existing bookings using the client in your application code.
+Now that you have all the dependencies installed, we need to instantiate Prisma Client so that we can interact with our database using the generated client. 
+
+we will need to pass an instance of the Prisma ORM driver adapter adapter to the PrismaClient constructor so that it can communicate with the database correctly. Without it, the Prisma Client would not be able to establish a connection to the database as it would lack the necessary information to interact with the underlying database engine.
+
+First, install the MariaDB adapter for Prisma:
+```bash
+npm install @prisma/adapter-mariadb@7.10.0
+```
+
+
+```ts
+import "dotenv/config";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient } from "../generated/prisma/client";
+
+const adapter = new PrismaMariaDb({
+  host: "localhost",
+  port: 3306,
+  user: process.env.MYSQL_USER!,
+  password: process.env.MYSQL_PASSWORD!,
+  database: process.env.MYSQL_DATABASE!,
+});
+
+export const prisma = new PrismaClient({ adapter });
+```
 
