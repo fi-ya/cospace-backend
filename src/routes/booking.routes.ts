@@ -1,5 +1,11 @@
 import { NextFunction, Request, Response, Router } from "express";
-import { Booking, createBookingSchema } from "../schemas/booking.schema";
+import {
+	Booking,
+	CreateBookingInput,
+	createBookingSchema,
+	UpdateBookingInput,
+	updateBookingSchema,
+} from "../schemas/booking.schema";
 import { BookingController } from "../controllers/booking.controller";
 import { auth } from "../middleware/auth";
 import { validateSchema } from "../middleware/validate";
@@ -15,20 +21,13 @@ router.post(
 	"/",
 	auth,
 	validateSchema(createBookingSchema),
-	(
-		req: Request<Record<string, never>, Booking, Booking>,
-		res: Response,
-		next: NextFunction,
-	) => bookingController.create(req, res, next),
+	(req: Request<Record<string, never>, Booking, CreateBookingInput>, res: Response, next: NextFunction) => bookingController.create(req, res, next),
 );
 router.put(
 	"/:id",
 	auth,
-	(
-		req: Request<{ id: string }, Booking, Booking>,
-		res: Response,
-		next: NextFunction,
-	) => bookingController.update(req, res, next),
+	validateSchema(updateBookingSchema),
+	(req: Request<{ id: string }, Booking, UpdateBookingInput>, res: Response, next: NextFunction) => bookingController.update(req, res, next),
 );
 router.patch(
 	"/:id",

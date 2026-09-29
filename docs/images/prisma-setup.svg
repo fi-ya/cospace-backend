@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="610" viewBox="0 0 1200 610" role="img" aria-labelledby="title description">
+  <title id="title">CoSpace API to MySQL connection</title>
+  <desc id="description">Requests flow from the Node.js Express API through the booking repository and Prisma Client to the MariaDB driver adapter connection pool and MySQL. The DATABASE_URL value flows from the environment file through dotenv to the application and Prisma configuration.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#415b62" />
+    </marker>
+    <marker id="smallArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0L8 4L0 8Z" fill="#b66a32" />
+    </marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #192e33; }
+      .title { font-size: 27px; font-weight: 700; }
+      .subtitle { font-size: 14px; fill: #52686d; }
+      .node-title { font-size: 17px; font-weight: 650; }
+      .node-copy { font-size: 13px; fill: #52686d; }
+      .tag { font-size: 11px; font-weight: 700; letter-spacing: 1px; fill: #52686d; }
+      .flow { fill: none; stroke: #415b62; stroke-width: 2.5; marker-end: url(#arrow); }
+      .config-flow { fill: none; stroke: #b66a32; stroke-width: 2; stroke-dasharray: 6 6; marker-end: url(#smallArrow); }
+    </style>
+  </defs>
+
+  <rect width="1200" height="610" rx="18" fill="#f3f6f3" />
+  <path d="M0 96H1200" stroke="#d9e2de" />
+  <text x="48" y="49" class="title">CoSpace API to MySQL</text>
+  <text x="48" y="76" class="subtitle">One request path, one shared Prisma client, one configured connection pool</text>
+
+  <g>
+    <rect x="48" y="142" width="230" height="142" rx="10" fill="#ffffff" stroke="#b9cbc4" stroke-width="1.5" />
+    <rect x="48" y="142" width="7" height="142" rx="3" fill="#34746d" />
+    <text x="70" y="169" class="tag">01 / HTTP</text>
+    <text x="70" y="202" class="node-title">Node.js API</text>
+    <text x="70" y="228" class="node-copy">Express routes, controllers</text>
+    <text x="70" y="248" class="node-copy">and services</text>
+  </g>
+
+  <g>
+    <rect x="335" y="142" width="230" height="142" rx="10" fill="#ffffff" stroke="#b9cbc4" stroke-width="1.5" />
+    <rect x="335" y="142" width="7" height="142" rx="3" fill="#34746d" />
+    <text x="357" y="169" class="tag">02 / DATA ACCESS</text>
+    <text x="357" y="202" class="node-title">Booking repository</text>
+    <text x="357" y="228" class="node-copy">Async reads and writes</text>
+    <text x="357" y="248" class="node-copy">Replace the in-memory array</text>
+  </g>
+
+  <g>
+    <rect x="622" y="142" width="230" height="142" rx="10" fill="#ffffff" stroke="#b9cbc4" stroke-width="1.5" />
+    <rect x="622" y="142" width="7" height="142" rx="3" fill="#34746d" />
+    <text x="644" y="169" class="tag">03 / ORM</text>
+    <text x="644" y="202" class="node-title">Prisma Client</text>
+    <text x="644" y="228" class="node-copy">Generated from schema.prisma</text>
+    <text x="644" y="248" class="node-copy">One shared application instance</text>
+  </g>
+
+  <g>
+    <rect x="909" y="142" width="243" height="142" rx="10" fill="#ffffff" stroke="#b9cbc4" stroke-width="1.5" />
+    <rect x="909" y="142" width="7" height="142" rx="3" fill="#34746d" />
+    <text x="931" y="169" class="tag">04 / DRIVER</text>
+    <text x="931" y="202" class="node-title">MySQL adapter</text>
+    <text x="931" y="228" class="node-copy">MariaDB driver manages</text>
+    <text x="931" y="248" class="node-copy">the connection pool</text>
+  </g>
+
+  <path d="M278 213H326" class="flow" />
+  <path d="M565 213H613" class="flow" />
+  <path d="M852 213H900" class="flow" />
+
+  <g>
+    <rect x="909" y="363" width="243" height="133" rx="10" fill="#e8f0ed" stroke="#8fb4a9" stroke-width="1.5" />
+    <text x="933" y="393" class="tag">PERSISTENT STORAGE</text>
+    <text x="933" y="429" class="node-title">MySQL database</text>
+    <text x="933" y="455" class="node-copy">cospace</text>
+    <text x="933" y="475" class="node-copy">teams, users, desks, rooms, bookings</text>
+  </g>
+  <path d="M1030 284V353" class="flow" />
+
+  <g>
+    <rect x="48" y="363" width="230" height="133" rx="10" fill="#fffaf3" stroke="#dfbf9d" stroke-width="1.5" />
+    <text x="70" y="393" class="tag">LOCAL CONFIGURATION</text>
+    <text x="70" y="429" class="node-title">.env</text>
+    <text x="70" y="455" class="node-copy">DATABASE_URL</text>
+    <text x="70" y="475" class="node-copy">Credentials stay out of source control</text>
+  </g>
+
+  <g>
+    <rect x="335" y="363" width="230" height="133" rx="10" fill="#fffaf3" stroke="#dfbf9d" stroke-width="1.5" />
+    <text x="357" y="393" class="tag">ENVIRONMENT LOADER</text>
+    <text x="357" y="429" class="node-title">dotenv</text>
+    <text x="357" y="455" class="node-copy">Loads .env into</text>
+    <text x="357" y="475" class="node-copy">process.env at startup</text>
+  </g>
+
+  <g>
+    <rect x="622" y="363" width="230" height="133" rx="10" fill="#fffaf3" stroke="#dfbf9d" stroke-width="1.5" />
+    <text x="644" y="393" class="tag">CONNECTION SETTINGS</text>
+    <text x="644" y="429" class="node-title">DATABASE_URL</text>
+    <text x="644" y="455" class="node-copy">Read by Prisma config</text>
+    <text x="644" y="475" class="node-copy">and the runtime adapter</text>
+  </g>
+
+  <path d="M278 429H326" class="config-flow" />
+  <path d="M565 429H613" class="config-flow" />
+  <path d="M737 363V307H1029V293" class="config-flow" />
+
+  <text x="48" y="560" class="subtitle">Prisma CLI uses prisma.config.ts for schema migrations and client generation. The running API uses the generated client and adapter.</text>
+</svg>
