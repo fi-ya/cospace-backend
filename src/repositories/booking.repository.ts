@@ -1,60 +1,76 @@
-import { Booking } from "../schemas/booking.schema";
+import { Prisma, type Booking as PrismaBooking } from "../generated/prisma/client";
+import { CreateBookingInput, UpdateBookingInput } from "../schemas/booking.schema";
+import { prisma } from "../utils/prisma";
 
 export class BookingRepository {
-	private readonly bookings: Booking[] = [
-		{ id: "1", desk: "Desk-01", floor: "Floor 1", date: "2026-09-21", active: true },
-		{ id: "2", desk: "Desk-02", floor: "Floor 1", date: "2026-09-22", active: true },
-		{ id: "3", desk: "Desk-03", floor: "Floor 2", date: "2026-09-23", active: false },
-	];
-
-	findAll(): Booking[] {
-		return this.bookings;
+	findAll(): Promise<PrismaBooking[]> {
+		return prisma.booking.findMany({
+			orderBy: [{ booking_date: "asc" }, { id: "asc" }],
+		});
 	}
 
-	findById(id: string): Booking | undefined {
-		return this.bookings.find((booking) => booking.id === id);
+	findById(id: number): Promise<PrismaBooking | null> {
+		return prisma.booking.findUnique({ where: { id } });
 	}
 
-	findPaginated(skip: number, limit: number): Booking[] {
-		return this.bookings.slice(skip, skip + limit);
+	findPaginated(skip: number, limit: number): Promise<PrismaBooking[]> {
+		return prisma.booking.findMany({
+			skip,
+			take: limit,
+			orderBy: [{ booking_date: "asc" }, { id: "asc" }],
+		});
 	}
 
-	count(): number {
-		return this.bookings.length;
+	count(): Promise<number> {
+		return prisma.booking.count();
 	}
 
-	create(booking: Booking): Booking {
-		this.bookings.push(booking);
-		return booking;
+	create(data: CreateBookingInput): Promise<PrismaBooking> {
+		return prisma.booking.create({
+			data: {
+				user_id: data.user_id,
+				desk_id: data.desk_id,
+				booking_date: new Date(`${data.booking_date}T00:00:00.000Z`),
+				active: data.active ?? true,
+			},
+		});
 	}
 
-	update(id: string, data: Partial<Booking>): Booking | undefined {
-		const bookingIndex = this.bookings.findIndex(
-			(booking) => booking.id === id,
-		);
-
-		if (bookingIndex === -1) {
-			return undefined;
+	async update(id: number, data: UpdateBookingInput): Promise<PrismaBooking | undefined> {
+		try {
+			return await prisma.booking.update({
+				where: { id },
+				data: {
+					...(data.user_id !== undefined && { user_id: data.user_id }),
+					...(data.desk_id !== undefined && { desk_id: data.desk_id }),
+					...(data.booking_date !== undefined && {
+						booking_date: new Date(`${data.booking_date}T00:00:00.000Z`),
+					}),
+					...(data.active !== undefined && { active: data.active }),
+				},
+			});
+		} catch (error) {
+			if (
+				error instanceof Prisma.PrismaClientKnownRequestError &&
+				error.code === "P2025"
+			) {
+				return undefined;
+			}
+			throw error;
 		}
-
-		const booking = this.bookings[bookingIndex];
-		if (!booking) {
-			return undefined;
-		}
-
-		this.bookings[bookingIndex] = { ...booking, ...data, id };
-		return this.bookings[bookingIndex];
 	}
 
-	delete(id: string): Booking | undefined {
-		const bookingIndex = this.bookings.findIndex(
-			(booking) => booking.id === id,
-		);
-
-		if (bookingIndex === -1) {
-			return undefined;
+	async delete(id: number): Promise<PrismaBooking | undefined> {
+		try {
+			return await prisma.booking.delete({ where: { id } });
+		} catch (error) {
+			if (
+				error instanceof Prisma.PrismaClientKnownRequestError &&
+				error.code === "P2025"
+			) {
+				return undefined;
+			}
+			throw error;
 		}
-
-		return this.bookings.splice(bookingIndex, 1)[0];
 	}
 }
