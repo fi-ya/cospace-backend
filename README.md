@@ -9,6 +9,19 @@ The Express API is not implemented yet. `server.js` is retained as the future ap
 - MySQL 8.x
 - A MySQL user with permission to create and alter tables in the `cospace` database
 
+## Environment Variables
+
+Copy `.env.example` to `.env` in the repository root, then fill in values for your local environment:
+
+```sh
+cp .env.example .env
+```
+
+- `DATABASE_URL` is the MySQL connection URL used by Prisma and the API.
+- `JWT_SECRET` is a long, randomly generated secret used to sign authentication tokens. The application fails to start if it is missing; it has no fallback value.
+
+Keep real credentials and secrets in `.env` only. `.env` is ignored by Git; commit changes to `.env.example` only when environment variable names change, and do not put working credentials in it.
+
 ## Database Schema
 
 The schema is made up of five tables:

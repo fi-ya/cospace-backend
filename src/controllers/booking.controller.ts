@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { HttpStatus } from "../constants/httpStatus";
 import { BadRequestError } from "../errors/badRequestError";
 import { NotFoundError } from "../errors/notFoundError";
+import { UnauthorizedError } from "../errors/unauthorizedError";
 import type {
 	Booking,
 	CreateBookingInput,
@@ -70,7 +71,13 @@ export class BookingController {
 		next: NextFunction,
 	): Promise<void> => {
 		try {
-			const booking = await this.bookingService.create(req.body);
+			const userId = req.user?.userId;
+			if (!userId) {
+				next(new UnauthorizedError());
+				return;
+			}
+
+			const booking = await this.bookingService.create(req.body, userId);
 			res.status(HttpStatus.CREATED).json(booking);
 		} catch (error: unknown) {
 			next(error);
