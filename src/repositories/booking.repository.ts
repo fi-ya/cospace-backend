@@ -1,60 +1,99 @@
-import { Booking } from "../schemas/booking.schema";
+import { Prisma, type Booking as PrismaBooking } from "../generated/prisma/client";
+import type {
+	Booking,
+	CreateBookingInput,
+	UpdateBookingInput,
+} from "../schemas/booking.schema";
+import { prisma } from "../utils/prisma";
+
+function toApiBooking(booking: PrismaBooking): Booking {
+	return {
+		id: booking.id,
+		user_id: booking.user_id,
+		desk_id: booking.desk_id,
+		booking_date: booking.booking_date.toISOString().slice(0, 10),
+		active: booking.active,
+	};
+}
+
+function isRecordNotFound(error: unknown): boolean {
+	return (
+		error instanceof Prisma.PrismaClientKnownRequestError &&
+		error.code === "P2025"
+	);
+}
 
 export class BookingRepository {
-	private readonly bookings: Booking[] = [
-		{ id: "1", desk: "Desk-01", floor: "Floor 1", date: "2026-09-21", active: true },
-		{ id: "2", desk: "Desk-02", floor: "Floor 1", date: "2026-09-22", active: true },
-		{ id: "3", desk: "Desk-03", floor: "Floor 2", date: "2026-09-23", active: false },
-	];
-
-	findAll(): Booking[] {
-		return this.bookings;
+	async findAll(): Promise<Booking[]> {
+		const bookings = await prisma.booking.findMany({
+			orderBy: [{ booking_date: "asc" }, { id: "asc" }],
+		});
+		return bookings.map(toApiBooking);
 	}
 
-	findById(id: string): Booking | undefined {
-		return this.bookings.find((booking) => booking.id === id);
+	async findById(id: number): Promise<Booking | undefined> {
+		const booking = await prisma.booking.findUnique({ where: { id } });
+		return booking ? toApiBooking(booking) : undefined;
 	}
 
-	findPaginated(skip: number, limit: number): Booking[] {
-		return this.bookings.slice(skip, skip + limit);
+	async findPaginated(skip: number, limit: number): Promise<Booking[]> {
+		const bookings = await prisma.booking.findMany({
+			skip,
+			take: limit,
+			orderBy: [{ booking_date: "asc" }, { id: "asc" }],
+		});
+		return bookings.map(toApiBooking);
 	}
 
-	count(): number {
-		return this.bookings.length;
+	count(): Promise<number> {
+		return prisma.booking.count();
 	}
 
-	create(booking: Booking): Booking {
-		this.bookings.push(booking);
-		return booking;
+	async create(data: CreateBookingInput): Promise<Booking> {
+		const booking = await prisma.booking.create({
+			data: {
+				user_id: data.user_id,
+				desk_id: data.desk_id,
+				booking_date: new Date(`${data.booking_date}T00:00:00.000Z`),
+				active: data.active,
+			},
+		});
+		return toApiBooking(booking);
 	}
 
-	update(id: string, data: Partial<Booking>): Booking | undefined {
-		const bookingIndex = this.bookings.findIndex(
-			(booking) => booking.id === id,
-		);
+	async update(
+		id: number,
+		data: UpdateBookingInput,
+	): Promise<Booking | undefined> {
+		const updateData: Prisma.BookingUncheckedUpdateInput = {
+			...(data.user_id !== undefined && { user_id: data.user_id }),
+			...(data.desk_id !== undefined && { desk_id: data.desk_id }),
+			...(data.booking_date !== undefined && {
+				booking_date: new Date(`${data.booking_date}T00:00:00.000Z`),
+			}),
+			...(data.active !== undefined && { active: data.active }),
+		};
 
-		if (bookingIndex === -1) {
-			return undefined;
+		try {
+			const booking = await prisma.booking.update({ where: { id }, data: updateData });
+			return toApiBooking(booking);
+		} catch (error: unknown) {
+			if (isRecordNotFound(error)) {
+				return undefined;
+			}
+			throw error;
 		}
-
-		const booking = this.bookings[bookingIndex];
-		if (!booking) {
-			return undefined;
-		}
-
-		this.bookings[bookingIndex] = { ...booking, ...data, id };
-		return this.bookings[bookingIndex];
 	}
 
-	delete(id: string): Booking | undefined {
-		const bookingIndex = this.bookings.findIndex(
-			(booking) => booking.id === id,
-		);
-
-		if (bookingIndex === -1) {
-			return undefined;
+	async delete(id: number): Promise<Booking | undefined> {
+		try {
+			const booking = await prisma.booking.delete({ where: { id } });
+			return toApiBooking(booking);
+		} catch (error: unknown) {
+			if (isRecordNotFound(error)) {
+				return undefined;
+			}
+			throw error;
 		}
-
-		return this.bookings.splice(bookingIndex, 1)[0];
 	}
 }
