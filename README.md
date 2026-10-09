@@ -1,97 +1,98 @@
 # CoSpace Backend
 
-CoSpace is BrightMedia's hybrid-office desk booking database. This repository currently contains the MySQL schema migrations, seed data, and reporting queries used to build and practise the database layer.
-
-The Express API is not implemented yet. `server.js` is retained as the future application entry point.
+CoSpace is BrightMedia's hybrid-office desk booking API. The backend uses Express, TypeScript, MySQL, and Prisma.
 
 ## Requirements
 
-- MySQL 8.x
-- A MySQL user with permission to create and alter tables in the `cospace` database
+- Node.js 20.x and npm
+- MySQL 8.x running locally
+- A MySQL account allowed to create and alter the `cospace-dev` database
 
-## Database Schema
+## Run Locally
 
-The schema is made up of five tables:
+1. Install dependencies from the repository root:
 
-- `teams`: organisational teams and departments
-- `users`: colleagues and their optional team assignment
-- `desks`: physical desks and their floor numbers
-- `rooms`: meeting rooms, floors, and capacities
-- `bookings`: desk reservations linked to a user and desk
+   ```bash
+   npm install
+   ```
 
-Foreign keys preserve referential integrity. Deleting a user or desk cascades to their bookings; deleting a team sets the related users' `team_id` to `NULL`.
+2. Create the development database in MySQL:
 
-Migration 002 adds the `uniq_desk_date` constraint on `(desk_id, booking_date)`, preventing two colleagues from booking the same desk on the same day.
+   ```bash
+   mysql -u root -p
+   ```
 
-## Setup
+   At the MySQL prompt, run:
 
-Open terminal and cd into the workspace directory.
+   ```sql
+   CREATE DATABASE `cospace-dev`;
+   EXIT;
+   ```
 
-Start a mysql client 
-```zsh
-mysql -u root
-```
+   Use your local MySQL username in place of `root` if needed.
 
-To view existing databases run: `SHOW DATABASES;`
-Create the database first because the migration files create tables but do not create the database itself:
+3. Create your local environment file and set the MySQL connection string:
 
-```sql
-CREATE DATABASE cospace;
-```
-To view current database run: `SELECT DATABASE();`
+   ```bash
+   cp .env.example .env
+   ```
 
-Apply the migrations in order from the repository root:
+   Edit `DATABASE_URL` in `.env` to use your MySQL username and password. URL-encode special characters in the password. The database name must match the database you created (`cospace-dev` by default).
+
+4. Apply the checked-in Prisma migrations and generate the client:
+
+   ```bash
+   npx prisma migrate deploy
+   npx prisma generate
+   ```
+
+   Migrations create the application tables. They do not insert sample records; the project does not currently define a Prisma seed command.
+
+5. Start the API:
+
+   ```bash
+   npm run dev
+   ```
+
+   The server listens on `http://localhost:5000`. In another terminal, check the API and its database-backed bookings route:
+
+   ```bash
+   curl -i http://localhost:5000/
+   curl -i http://localhost:5000/bookings
+   ```
+
+   The root route reports API status. The bookings route exercises the database connection and returns an empty list until bookings are added.
+
+## Prisma Development
+
+After changing `prisma/schema.prisma`, create and apply a migration during development, then regenerate the client:
 
 ```bash
-SOURCE migrations/001_init_schema.up.sql
-SOURCE migrations/002_add_indexing.up.sql
+npx prisma migrate dev --name describe_your_change
+npx prisma generate
 ```
 
-Load the sample data and reporting queries:
+Check migration state with:
 
 ```bash
-SOURCE scripts/seed_and_queries.sql
+npx prisma migrate status
 ```
 
-The seed script starts by clearing the existing `bookings`, `users`, `desks`, `rooms`, and `teams` rows. It also includes example update and delete statements, so use it only against a development database.
-
-## Rolling Back
-
-Undo migration 002 before migration 001:
-
-```bash
-SOURCE migrations/002_add_indexing.down.sql
-SOURCE migrations/001_init_schema.down.sql
-```
-
-## Repository Layout
+## Project Layout
 
 ```text
-.
-├── migrations/
-│   ├── 001_init_schema.up.sql
-│   ├── 001_init_schema.down.sql
-│   ├── 002_add_indexing.up.sql
-│   └── 002_add_indexing.down.sql
-├── scripts/
-│   └── seed_and_queries.sql
-└── docs/
-	├── schema.md
-	├── tables.md
-	├── query.md
-	└── git-journal.md
+prisma/
+  schema.prisma
+  migrations/
+src/
+  controllers/
+  middleware/
+  repositories/
+  routes/
+  services/
+  utils/
 ```
 
-`docs/` contains the schema notes, SQL practice exercises, migration PR descriptions, and Git learning journal.
+The Prisma schema defines teams, users, desks, rooms, and bookings. `prisma/migrations/` contains the SQL migration history used to build the MySQL schema.
 
-## Verification Queries
-
-After seeding, inspect the schema and sample data with:
-
-```sql
-USE cospace;
-SHOW TABLES;
-SELECT * FROM bookings;
-```
-
-The reporting query in `scripts/seed_and_queries.sql` uses `LEFT JOIN` and `COUNT(b.id)` so colleagues with no bookings are included with a count of zero.
+For the earlier, manual SQL migration and query exercise, see [docs/old-db-setup.md](docs/old-db-setup.md). It uses a separate `cospace` database and is not the setup for running the current Prisma-backed API.
