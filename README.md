@@ -63,6 +63,19 @@ CoSpace is BrightMedia's hybrid-office desk booking API. The backend uses Expres
 
    The root route reports API status. The bookings route exercises the database connection and returns an empty list until bookings are added.
 
+## Booking Authentication
+
+To create a booking, the intended flow is to log in with `POST /auth/login`, then send the returned token as a Bearer token in the `Authorization` header:
+
+```bash
+curl -X POST http://localhost:5000/bookings \
+   -H 'Content-Type: application/json' \
+   -H 'Authorization: Bearer <token-from-login>' \
+   -d '{"user_id":12,"desk_id":4,"booking_date":"2026-10-12"}'
+```
+
+**Current limitation:** this flow is not yet wired up in the API. The auth router is not mounted, and the booking middleware currently accepts only the hard-coded `Authorization: super-secret-key` value, not a Bearer token. See [docs/api-reference.md](docs/api-reference.md) for the current route behavior.
+
 ## Prisma Development
 
 After changing `prisma/schema.prisma`, create and apply a migration during development, then regenerate the client:
@@ -96,3 +109,5 @@ src/
 The Prisma schema defines teams, users, desks, rooms, and bookings. `prisma/migrations/` contains the SQL migration history used to build the MySQL schema.
 
 For the earlier, manual SQL migration and query exercise, see [docs/old-db-setup.md](docs/old-db-setup.md). It uses a separate `cospace` database and is not the setup for running the current Prisma-backed API.
+
+For API endpoints, request bodies, response examples, and status codes, see [docs/api-reference.md](docs/api-reference.md).
